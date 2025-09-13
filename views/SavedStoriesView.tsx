@@ -4,7 +4,7 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { TrashIcon } from '../components/icons/TrashIcon';
 import { BookOpenIcon } from '../components/icons/BookOpenIcon';
-import { UploadIcon } from '../components/icons/UploadIcon';
+import { DownloadIcon } from '../components/icons/DownloadIcon';
 import { ImportModal } from '../components/ImportModal';
 
 interface SavedStoriesViewProps {
@@ -40,7 +40,7 @@ export const SavedStoriesView: React.FC<SavedStoriesViewProps> = ({ stories, onV
             aria-label="Import Story"
             title="Import Story"
         >
-            <UploadIcon className="w-6 h-6" />
+            <DownloadIcon className="w-6 h-6" />
         </Button>
 
         <ImportModal 

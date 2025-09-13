@@ -3,6 +3,7 @@ import { useSettings } from '../../contexts/SettingsContext';
 import { Sidebar } from './Sidebar';
 import { BottomNav } from './BottomNav';
 import { Topbar } from './Topbar';
+import type { SettingsViewType } from '../../App';
 
 type View = 'create' | 'stories' | 'characters' | 'settings' | 'reader' | 'history';
 
@@ -10,6 +11,8 @@ interface LayoutProps {
   children: React.ReactNode;
   currentView: View;
   setCurrentView: (view: View) => void;
+  settingsView: SettingsViewType;
+  onBackToSettingsMain: () => void;
 }
 
 const viewTitles: Record<View, string> = {
@@ -17,14 +20,27 @@ const viewTitles: Record<View, string> = {
     stories: 'Library',
     history: 'History',
     characters: 'Characters',
-    settings: 'Settings',
-    reader: 'reader',
+    settings: 'Settings', // This will be overridden by settingsView logic
+    reader: 'reader', // Not used in topbar
+};
+
+const settingsViewTitles: Record<SettingsViewType, string> = {
+    main: 'Settings',
+    appearance: 'Appearance',
+    typography: 'Typography',
+    reading: 'Reading',
+    data: 'Data & History',
+    about: 'About BedTales',
 };
 
 
-export const Layout: React.FC<LayoutProps> = ({ children, currentView, setCurrentView }) => {
+export const Layout: React.FC<LayoutProps> = ({ children, currentView, setCurrentView, settingsView, onBackToSettingsMain }) => {
   const { theme } = useSettings();
   const showNav = currentView !== 'reader';
+
+  const topbarTitle = currentView === 'settings' 
+    ? settingsViewTitles[settingsView] 
+    : viewTitles[currentView];
 
   return (
     <div 
@@ -42,7 +58,13 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, setCurren
         
         {/* Main Content Column */}
         <div className="flex flex-1 flex-col h-screen">
-            {showNav && <Topbar title={viewTitles[currentView]} />}
+            {showNav && (
+              <Topbar 
+                title={topbarTitle} 
+                showBackButton={currentView === 'settings' && settingsView !== 'main'}
+                onBack={onBackToSettingsMain}
+              />
+            )}
 
             {/* Scrollable content */}
             <main className="flex-1 overflow-y-auto">

@@ -10,12 +10,20 @@ import { StoryReaderView } from './views/StoryReaderView';
 import { HistoryView } from './views/HistoryView';
 import { useSettings } from './contexts/SettingsContext';
 import { decodeStory } from './utils/storyShare';
+import { AppearanceSettingsView } from './views/settings/AppearanceSettingsView';
+import { TypographySettingsView } from './views/settings/TypographySettingsView';
+import { ReadingSettingsView } from './views/settings/ReadingSettingsView';
+import { DataSettingsView } from './views/settings/DataSettingsView';
+import { AboutView } from './views/settings/AboutView';
+
 
 type View = 'create' | 'stories' | 'characters' | 'settings' | 'reader' | 'history';
+export type SettingsViewType = 'main' | 'appearance' | 'typography' | 'reading' | 'data' | 'about';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>('create');
   const [previousView, setPreviousView] = useState<View>('create');
+  const [settingsView, setSettingsView] = useState<SettingsViewType>('main');
   
   const { data: savedStories, addItem: addStory, deleteItem: deleteStory } = useIndexedDB<SavedStory>('stories');
   const { data: savedCharacters, addItem: addCharacterDB, deleteItem: deleteCharacterDB } = useIndexedDB<Character>('characters');
@@ -175,6 +183,9 @@ const App: React.FC = () => {
   };
   
   const handleSetView = (view: View) => {
+    if (view !== 'settings') {
+      setSettingsView('main');
+    }
     setCurrentView(view);
   }
 
@@ -186,7 +197,12 @@ const App: React.FC = () => {
   }) : false;
 
   return (
-    <Layout currentView={currentView} setCurrentView={handleSetView}>
+    <Layout 
+      currentView={currentView} 
+      setCurrentView={handleSetView}
+      settingsView={settingsView}
+      onBackToSettingsMain={() => setSettingsView('main')}
+    >
         {currentView === 'create' && (
           <CreatorView 
             characters={savedCharacters} 
@@ -218,7 +234,14 @@ const App: React.FC = () => {
           />
         )}
         {currentView === 'settings' && (
-          <SettingsView />
+          <>
+            {settingsView === 'main' && <SettingsView onNavigate={setSettingsView} />}
+            {settingsView === 'appearance' && <AppearanceSettingsView />}
+            {settingsView === 'typography' && <TypographySettingsView />}
+            {settingsView === 'reading' && <ReadingSettingsView />}
+            {settingsView === 'data' && <DataSettingsView />}
+            {settingsView === 'about' && <AboutView />}
+          </>
         )}
         {currentView === 'reader' && storyForReader && (
             <StoryReaderView

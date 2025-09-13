@@ -1,7 +1,7 @@
-import type { SavedStory, Character, HistoryItem } from '../types';
+import type { SavedStory, Character, HistoryItem, AppSetting } from '../types';
 
 const DB_NAME = 'bedtales-db';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let dbPromise: Promise<IDBDatabase> | null = null;
 
@@ -34,14 +34,17 @@ const initDB = (): Promise<IDBDatabase> => {
             if (!db.objectStoreNames.contains('characters')) {
                 db.createObjectStore('characters', { keyPath: 'id' });
             }
+            if (!db.objectStoreNames.contains('settings')) {
+                db.createObjectStore('settings', { keyPath: 'id' });
+            }
         };
     });
 
     return dbPromise;
 };
 
-type StoreName = 'stories' | 'history' | 'characters';
-type StoreType = SavedStory | HistoryItem | Character;
+type StoreName = 'stories' | 'history' | 'characters' | 'settings';
+type StoreType = SavedStory | HistoryItem | Character | AppSetting;
 
 export const getAll = async <T extends StoreType>(storeName: StoreName): Promise<T[]> => {
     const db = await initDB();

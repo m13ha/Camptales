@@ -48,3 +48,8 @@ export interface Character {
   description: string;
   imageUrl?: string;
 }
+
+export interface AppSetting {
+  id: string; // The setting key, e.g., 'app-theme'
+  value: any;
+}

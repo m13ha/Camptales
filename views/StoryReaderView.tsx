@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { jsPDF } from 'jspdf';
 import type { GeneratedStory, SavedStory, HistoryItem } from '../types';
 import { StoryDisplay } from '../components/StoryDisplay';
 import { Button } from '../components/ui/Button';
 import { SaveIcon } from '../components/icons/SaveIcon';
 import { ArrowLeftIcon } from '../components/icons/ArrowLeftIcon';
 import { ShareIcon } from '../components/icons/ShareIcon';
+import { DownloadIcon } from '../components/icons/DownloadIcon';
 import { ShareModal } from '../components/ShareModal';
 import { SpeakerOnIcon } from '../components/icons/SpeakerOnIcon';
 import { SpeakerOffIcon } from '../components/icons/SpeakerOffIcon';
@@ -21,6 +23,7 @@ export const StoryReaderView: React.FC<StoryReaderViewProps> = ({ story, onBack,
   const [isShareModalOpen, setShareModalOpen] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [currentSpeechIndex, setCurrentSpeechIndex] = useState(-1);
+  const [isExporting, setIsExporting] = useState(false);
   const { speechRate, speechPitch } = useSettings();
 
   // Guard clause to prevent crashes from malformed story data (e.g., from old storage versions)
@@ -47,6 +50,81 @@ export const StoryReaderView: React.FC<StoryReaderViewProps> = ({ story, onBack,
       }
     };
   }, []);
+
+    const handleExportPdf = async () => {
+        if (isExporting) return;
+        setIsExporting(true);
+        try {
+            const doc = new jsPDF({
+                orientation: 'p',
+                unit: 'pt',
+                format: 'a4'
+            });
+
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const margin = 40;
+            const maxWidth = pageWidth - margin * 2;
+            let y = margin; // Current Y position
+
+            // Story Title
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(24);
+            const titleLines = doc.splitTextToSize(story.title, maxWidth);
+            doc.text(titleLines, pageWidth / 2, y, { align: 'center' });
+            y += doc.getTextDimensions(titleLines).h + 30;
+
+            // Reset font for paragraphs
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(12);
+            
+            for (const part of story.parts) {
+                const imageMaxHeight = 300;
+                
+                // Add Image
+                const img = new Image();
+                img.src = part.imageUrl!;
+                await new Promise(resolve => { img.onload = resolve; });
+
+                const imgRatio = img.width / img.height;
+                let imgWidth = maxWidth;
+                let imgHeight = imgWidth / imgRatio;
+
+                if (imgHeight > imageMaxHeight) {
+                    imgHeight = imageMaxHeight;
+                    imgWidth = imgHeight * imgRatio;
+                }
+                
+                const imgX = (pageWidth - imgWidth) / 2;
+
+                // Add Paragraph Text
+                const textLines = doc.splitTextToSize(part.paragraph, maxWidth);
+                const textHeight = doc.getTextDimensions(textLines).h;
+
+                // Check for page break
+                if (y + imgHeight + textHeight + 20 > pageHeight - margin) {
+                    doc.addPage();
+                    y = margin;
+                }
+
+                doc.addImage(img.src, 'PNG', imgX, y, imgWidth, imgHeight);
+                y += imgHeight + 20;
+                
+                doc.text(textLines, margin, y);
+                y += textHeight + 40; // Space before next part
+            }
+            
+            // Sanitize filename
+            const sanitizedTitle = story.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            doc.save(`${sanitizedTitle || 'story'}.pdf`);
+
+        } catch (err) {
+            console.error("Error exporting PDF:", err);
+            alert("Sorry, an error occurred while creating the PDF.");
+        } finally {
+            setIsExporting(false);
+        }
+    };
 
   const handleToggleSpeech = useCallback(() => {
     if (!('speechSynthesis' in window)) {
@@ -116,6 +194,22 @@ export const StoryReaderView: React.FC<StoryReaderViewProps> = ({ story, onBack,
                     <>
                         <SpeakerOnIcon className="w-5 h-5 mr-2" />
                         Read Aloud
+                    </>
+                )}
+            </Button>
+             <Button onClick={handleExportPdf} size="sm" disabled={isExporting}>
+                {isExporting ? (
+                    <>
+                        <svg className="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Exporting...
+                    </>
+                ) : (
+                    <>
+                        <DownloadIcon className="w-5 h-5 mr-2" />
+                        Export PDF
                     </>
                 )}
             </Button>

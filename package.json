@@ -11,7 +11,10 @@
   "dependencies": {
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "@google/genai": "^1.19.0"
+    "@google/genai": "^1.19.0",
+    "jspdf": "^2.5.1",
+    "@storybook/react-vite": "^9.1.5",
+    "@storybook/react": "^9.1.5"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

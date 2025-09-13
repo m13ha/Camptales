@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getAll, add, remove, removeMultiple } from '../services/dbService';
 // FIX: Import specific types to create a stronger constraint for the generic hook.
-import type { SavedStory, Character, HistoryItem } from '../types';
+import type { SavedStory, Character, HistoryItem, AppSetting } from '../types';
 
-type StoreName = 'stories' | 'history' | 'characters';
+type StoreName = 'stories' | 'history' | 'characters' | 'settings';
 // FIX: The previous DBItem interface was too generic and did not satisfy the type constraints
 // of the dbService functions. This union type ensures type safety.
-type DBItem = SavedStory | Character | HistoryItem;
+type DBItem = SavedStory | Character | HistoryItem | AppSetting;
 
 export function useIndexedDB<T extends DBItem>(storeName: StoreName) {
     const [data, setData] = useState<T[]>([]);

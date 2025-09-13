@@ -1,33 +1,12 @@
-import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
 import { themes, fonts, fontSizes, Theme } from '../themes';
 import type { StoryLayout } from '../layouts';
+import { useIndexedDB } from '../hooks/useIndexedDB';
+import type { AppSetting } from '../types';
 
 type FontStyle = keyof typeof fonts;
 type FontSize = keyof typeof fontSizes;
 export type HistoryRetentionPeriod = '3d' | '7d' | '30d' | 'never';
-
-// Helper to get from localStorage
-const getFromLocalStorage = <T,>(key: string, defaultValue: T): T => {
-    if (typeof window === 'undefined') return defaultValue;
-    try {
-        const item = window.localStorage.getItem(key);
-        return item ? JSON.parse(item) : defaultValue;
-    } catch (error) {
-        console.error(`Error reading localStorage key "${key}":`, error);
-        return defaultValue;
-    }
-};
-
-// Helper to set to localStorage
-const setInLocalStorage = <T,>(key: string, value: T): void => {
-    if (typeof window === 'undefined') return;
-    try {
-        window.localStorage.setItem(key, JSON.stringify(value));
-    } catch (error) {
-        console.error(`Error setting localStorage key "${key}":`, error);
-    }
-};
-
 
 interface SettingsContextType {
   theme: Theme;
@@ -48,25 +27,44 @@ interface SettingsContextType {
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
+const defaultSettings = {
+  themeName: 'cosmicNight',
+  fontStyle: 'Sans Serif' as FontStyle,
+  fontSize: 'Medium' as FontSize,
+  historyRetention: '7d' as HistoryRetentionPeriod,
+  speechRate: 1,
+  speechPitch: 1,
+  storyLayout: 'classic' as StoryLayout,
+};
+
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [themeName, setThemeName] = useState(() => getFromLocalStorage('app-theme', 'cosmicNight'));
-  const [fontStyle, setFontStyle] = useState<FontStyle>(() => getFromLocalStorage('app-font-style', 'Sans Serif'));
-  const [fontSize, setFontSize] = useState<FontSize>(() => getFromLocalStorage('app-font-size', 'Medium'));
-  const [historyRetention, setHistoryRetention] = useState<HistoryRetentionPeriod>(() => getFromLocalStorage('history-retention', '7d'));
-  const [speechRate, setSpeechRate] = useState<number>(() => getFromLocalStorage('speech-rate', 1));
-  const [speechPitch, setSpeechPitch] = useState<number>(() => getFromLocalStorage('speech-pitch', 1));
-  const [storyLayout, setStoryLayout] = useState<StoryLayout>(() => getFromLocalStorage('story-layout', 'classic'));
+  // Local state for settings, initialized with defaults
+  const [themeName, setThemeName] = useState(defaultSettings.themeName);
+  const [fontStyle, setFontStyle] = useState<FontStyle>(defaultSettings.fontStyle);
+  const [fontSize, setFontSize] = useState<FontSize>(defaultSettings.fontSize);
+  const [historyRetention, setHistoryRetention] = useState<HistoryRetentionPeriod>(defaultSettings.historyRetention);
+  const [speechRate, setSpeechRate] = useState<number>(defaultSettings.speechRate);
+  const [speechPitch, setSpeechPitch] = useState<number>(defaultSettings.speechPitch);
+  const [storyLayout, setStoryLayout] = useState<StoryLayout>(defaultSettings.storyLayout);
+  
+  // Hook to interact with the 'settings' store in IndexedDB
+  const { data: settingsFromDB, addItem: saveSettingToDB, loading: settingsLoading } = useIndexedDB<AppSetting>('settings');
+
+  // Effect to load settings from DB and update state
+  useEffect(() => {
+      if (!settingsLoading && settingsFromDB) {
+          const settingsMap = new Map(settingsFromDB.map(s => [s.id, s.value]));
+          setThemeName(settingsMap.get('app-theme') ?? defaultSettings.themeName);
+          setFontStyle(settingsMap.get('app-font-style') ?? defaultSettings.fontStyle);
+          setFontSize(settingsMap.get('app-font-size') ?? defaultSettings.fontSize);
+          setHistoryRetention(settingsMap.get('history-retention') ?? defaultSettings.historyRetention);
+          setSpeechRate(settingsMap.get('speech-rate') ?? defaultSettings.speechRate);
+          setSpeechPitch(settingsMap.get('speech-pitch') ?? defaultSettings.speechPitch);
+          setStoryLayout(settingsMap.get('story-layout') ?? defaultSettings.storyLayout);
+      }
+  }, [settingsFromDB, settingsLoading]);
 
   const theme = useMemo(() => themes[themeName] || themes.cosmicNight, [themeName]);
-
-  // Effects to persist settings changes to localStorage
-  useEffect(() => { setInLocalStorage('app-theme', themeName) }, [themeName]);
-  useEffect(() => { setInLocalStorage('app-font-style', fontStyle) }, [fontStyle]);
-  useEffect(() => { setInLocalStorage('app-font-size', fontSize) }, [fontSize]);
-  useEffect(() => { setInLocalStorage('history-retention', historyRetention) }, [historyRetention]);
-  useEffect(() => { setInLocalStorage('speech-rate', speechRate) }, [speechRate]);
-  useEffect(() => { setInLocalStorage('speech-pitch', speechPitch) }, [speechPitch]);
-  useEffect(() => { setInLocalStorage('story-layout', storyLayout) }, [storyLayout]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -96,25 +94,34 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             document.head.appendChild(link);
         }
     }
-
-
   }, [theme, fontStyle, fontSize]);
+
+  // Generic setter function to update state and DB
+  const createSetter = useCallback(<T,>(
+    stateSetter: React.Dispatch<React.SetStateAction<T>>,
+    settingKey: string
+  ) => {
+      return (newValue: T) => {
+          stateSetter(newValue);
+          saveSettingToDB({ id: settingKey, value: newValue });
+      };
+  }, [saveSettingToDB]);
 
   const value = {
     theme,
-    setTheme: setThemeName,
+    setTheme: createSetter(setThemeName, 'app-theme'),
     fontStyle,
-    setFontStyle,
+    setFontStyle: createSetter(setFontStyle, 'app-font-style'),
     fontSize,
-    setFontSize,
+    setFontSize: createSetter(setFontSize, 'app-font-size'),
     historyRetention,
-    setHistoryRetention,
+    setHistoryRetention: createSetter(setHistoryRetention, 'history-retention'),
     speechRate,
-    setSpeechRate,
+    setSpeechRate: createSetter(setSpeechRate, 'speech-rate'),
     speechPitch,
-    setSpeechPitch,
+    setSpeechPitch: createSetter(setSpeechPitch, 'speech-pitch'),
     storyLayout,
-    setStoryLayout,
+    setStoryLayout: createSetter(setStoryLayout, 'story-layout'),
   };
 
   return (
