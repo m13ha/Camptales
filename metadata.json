@@ -1,5 +1,7 @@
 {
   "name": "Bedtime Story Maker",
   "description": "An application that uses AI to generate illustrated bedtime stories based on user prompts. It creates both the story text and beautiful images to accompany it.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "microphone"
+  ]
 }

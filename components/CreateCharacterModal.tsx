@@ -60,7 +60,9 @@ export const CreateCharacterModal: React.FC<CreateCharacterModalProps> = ({ isOp
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Create New Character">
-      <form onSubmit={handleSaveCharacter} className="space-y-4">
+      <form onSubmit={handleSaveCharacter}>
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Left Column: Image Preview */}
           <div className="aspect-square bg-[--input-background] border-2 border-dashed border-[--border] rounded-lg flex items-center justify-center overflow-hidden relative">
               {isGeneratingPreview && (
                   <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
@@ -80,53 +82,57 @@ export const CreateCharacterModal: React.FC<CreateCharacterModalProps> = ({ isOp
               )}
           </div>
 
-          <Textarea
-              id="char-desc"
-              label="1. Describe your character"
-              value={newChar.description}
-              onChange={(e) => setNewChar(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="e.g., A tiny dragon the size of a teacup..."
-              required
-              disabled={isGeneratingPreview}
-              rows={4}
-          />
-          
-          <Button 
-              type="button" 
-              onClick={handleGeneratePreview}
-              disabled={isGeneratingPreview || !newChar.description.trim()}
-              className="w-full"
-          >
-              {isGeneratingPreview ? 'Generating...' : '2. Generate Portrait'}
-          </Button>
+          {/* Right Column: Form Fields */}
+          <div className="flex flex-col space-y-4">
+              <Textarea
+                  id="char-desc"
+                  label="1. Describe your character"
+                  value={newChar.description}
+                  onChange={(e) => setNewChar(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="e.g., A tiny dragon the size of a teacup..."
+                  required
+                  disabled={isGeneratingPreview}
+                  rows={4}
+                  className="flex-grow"
+              />
+              
+              <Button 
+                  type="button" 
+                  onClick={handleGeneratePreview}
+                  disabled={isGeneratingPreview || !newChar.description.trim()}
+                  className="w-full"
+              >
+                  {isGeneratingPreview ? 'Generating...' : '2. Generate Portrait'}
+              </Button>
 
-          {newChar.imageUrl && (
-              <div className="border-t border-[--border] pt-4 mt-4 space-y-4 animate-fade-in">
-                  <Input
-                      id="char-name"
-                      label="3. Name your character"
-                      value={newChar.name}
-                      onChange={(e) => setNewChar(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="e.g., Sparklewing"
-                      required
-                  />
-                  <div className="flex justify-end gap-2">
-                     <Button 
-                          type="button" 
-                          onClick={handleClose} 
-                          className="!bg-gray-600 hover:!bg-gray-700"
-                      >
-                          Cancel
-                      </Button>
-                      <Button 
-                          type="submit" 
-                          disabled={!newChar.name.trim()} 
-                      >
-                          Save Character
-                      </Button>
-                  </div>
-              </div>
-          )}
+               <Input
+                  id="char-name"
+                  label="3. Name your character"
+                  value={newChar.name}
+                  onChange={(e) => setNewChar(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="e.g., Sparklewing"
+                  required
+                  disabled={!newChar.imageUrl}
+              />
+          </div>
+        </div>
+
+        {/* Modal Footer */}
+        <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-[--border]">
+            <Button 
+                type="button" 
+                onClick={handleClose} 
+                className="!bg-gray-600 hover:!bg-gray-700"
+            >
+                Cancel
+            </Button>
+            <Button 
+                type="submit" 
+                disabled={!newChar.name.trim() || !newChar.imageUrl} 
+            >
+                Save Character
+            </Button>
+        </div>
       </form>
     </Modal>
   );

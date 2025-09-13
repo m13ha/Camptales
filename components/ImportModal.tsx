@@ -33,16 +33,31 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImp
 
 
   const handleImport = async () => {
-    if (!code.trim()) {
-      setError('Please paste a story code.');
+    const inputValue = code.trim();
+    if (!inputValue) {
+      setError('Please paste a story link or code.');
       return;
     }
+
+    let finalCode = inputValue;
+
+    // Intelligently detect if the input is a URL and extract the code
+    try {
+        const url = new URL(inputValue);
+        const codeFromUrl = url.searchParams.get('import');
+        if (codeFromUrl) {
+            finalCode = codeFromUrl;
+        }
+    } catch (e) {
+        // Not a valid URL, so we assume `inputValue` is the code itself.
+    }
+
     setError(null);
     setIsImporting(true);
 
     try {
       // 1. Decode the story code to get text and image prompts
-      const decodedData: DecodedStory = decodeStory(code);
+      const decodedData: DecodedStory = decodeStory(finalCode);
       const layoutForGeneration = decodedData.layout || currentUserLayout;
       const aspectRatio = storyLayouts[layoutForGeneration].aspectRatio;
 
@@ -50,10 +65,9 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImp
       const newStoryParts: StoryPart[] = [];
       for (const [index, part] of decodedData.parts.entries()) {
         setImportMessage(`Generating illustration ${index + 1} of ${decodedData.parts.length}...`);
-        // Add a delay between API calls to avoid rate limiting
-        if (index > 0) {
-          await new Promise(resolve => setTimeout(resolve, 3000));
-        }
+        // Add a delay before each API call to avoid rate limiting to prevent 429 errors.
+        await new Promise(resolve => setTimeout(resolve, 5000)); // 5-second delay
+        
         const imageUrl = await generateStoryIllustration(part.imagePrompt, aspectRatio);
         newStoryParts.push({
           paragraph: part.paragraph,
@@ -95,15 +109,15 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImp
       ) : (
         <>
           <p className="text-[--text-secondary] mb-4">
-            Paste the story code you received from a friend below.
+            Paste the share link or story code you received from a friend below.
           </p>
           <Textarea
             id="import-code"
-            label="Story Code"
+            label="Share Link or Story Code"
             value={code}
             onChange={(e) => setCode(e.target.value)}
             rows={6}
-            placeholder="Paste code here..."
+            placeholder="Paste share link or code here..."
           />
           {error && <p className="text-red-400 mt-2 text-sm">{error}</p>}
           <div className="mt-4 flex justify-end gap-2">

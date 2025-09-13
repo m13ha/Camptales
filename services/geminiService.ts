@@ -10,13 +10,9 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 // Helper function to add a delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-const storySchema = {
+const storyPartsSchema = {
     type: Type.OBJECT,
     properties: {
-        title: {
-            type: Type.STRING,
-            description: "A creative and catchy title for the story, under 10 words."
-        },
         story: {
             type: Type.ARRAY,
             description: "An array of exactly 3 story parts.",
@@ -36,7 +32,29 @@ const storySchema = {
             }
         }
     },
-    required: ["title", "story"]
+    required: ["story"]
+};
+
+export const generateTitle = async (prompt: UserPrompt): Promise<string> => {
+    try {
+        const titlePrompt = `Generate a creative and catchy title, under 10 words, for a children's bedtime story with the following elements:
+- Character: ${prompt.character}
+- Setting: ${prompt.setting}
+- Plot: ${prompt.plot}
+- Concept: ${prompt.concept}
+Return only the title text, without any labels or quotes.`;
+
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: titlePrompt,
+        });
+
+        // Clean up the response, removing potential quotes and leading/trailing whitespace.
+        return response.text.trim().replace(/"/g, '');
+    } catch (error) {
+        console.error("Error generating story title:", error);
+        throw new Error("Failed to generate a title for the story. The AI might be daydreaming. Please try again.");
+    }
 };
 
 const storyIdeasSchema = {
@@ -85,9 +103,8 @@ export const generateStoryAndImages = async (
     prompt: UserPrompt,
     setLoadingMessage: (message: string) => void,
     aspectRatio: AspectRatio,
-): Promise<{ title: string; parts: StoryPart[] }> => {
+): Promise<StoryPart[]> => {
     
-    setLoadingMessage('Crafting a wondrous tale just for you...');
     console.log("Generating story with prompt:", prompt);
 
     const storyPrompt = `Create a short bedtime story for a child.
@@ -104,7 +121,7 @@ export const generateStoryAndImages = async (
             contents: storyPrompt,
             config: {
                 responseMimeType: 'application/json',
-                responseSchema: storySchema,
+                responseSchema: storyPartsSchema,
             }
         });
     } catch (error) {
@@ -117,7 +134,7 @@ export const generateStoryAndImages = async (
     
     console.log("Raw story response from AI:", textResponse.text);
 
-    let storyData: StoryApiResponse;
+    let storyData: { story: { paragraph: string, imagePrompt: string }[] };
     try {
         // Sanitize the response: LLMs sometimes wrap JSON in markdown backticks.
         const sanitizedText = textResponse.text.trim().replace(/^```json\s*/, '').replace(/```$/, '');
@@ -140,10 +157,9 @@ export const generateStoryAndImages = async (
         setLoadingMessage(`Generating illustration ${index + 1} of ${storyData.story.length}...`);
         console.log(`Generating image for part ${index + 1} with prompt:`, part.imagePrompt);
 
-        // Add a delay between image generation calls to avoid hitting rate limits.
-        if (index > 0) {
-            await delay(3000); // Increased delay to 3 seconds
-        }
+        // Add a delay before each image generation call to avoid hitting rate limits.
+        // The previous implementation skipped the delay for the first image, causing 429 errors.
+        await delay(5000); // 5-second delay
 
         try {
             const imageResult = await ai.models.generateImages({
@@ -179,9 +195,8 @@ export const generateStoryAndImages = async (
         }
     }
 
-    const finalStory = { title: storyData.title, parts: finalStoryParts };
-    console.log("Finished generating all story parts:", finalStory);
-    return finalStory;
+    console.log("Finished generating all story parts:", finalStoryParts);
+    return finalStoryParts;
 };
 
 export const generateStoryIllustration = async (prompt: string, aspectRatio: AspectRatio): Promise<string> => {
@@ -244,5 +259,65 @@ export const generateCharacterImage = async (description: string): Promise<strin
         }
         // Fallback for non-Error exceptions.
         throw new Error('An unexpected error occurred while generating the character portrait.');
+    }
+}
+
+// Helper function to convert Blob to Base64
+const blobToBase64 = (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            // result is a data URL, e.g., "data:audio/webm;base64,...."
+            // we need to strip the prefix
+            const base64String = (reader.result as string).split(',')[1];
+            resolve(base64String);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+};
+
+export const transcribeAndStructureStoryPrompt = async (audioBlob: Blob): Promise<UserPrompt> => {
+    try {
+        const base64Audio = await blobToBase64(audioBlob);
+
+        const instructionPrompt = `
+            Transcribe the following audio, which describes a bedtime story idea.
+            Based on the transcription, extract the following components:
+            1.  **Main Character**: A description of the protagonist.
+            2.  **Setting**: Where the story takes place.
+            3.  **Plot**: The main events or goal of the story.
+            4.  **Concept**: The underlying moral, theme, or lesson.
+
+            Return the response as a single, well-formed JSON object with keys: "character", "setting", "plot", and "concept".
+            If any component is not explicitly mentioned, infer a creative and suitable value based on the context provided.
+        `;
+
+        const audioPart = {
+            inlineData: {
+                mimeType: audioBlob.type,
+                data: base64Audio
+            }
+        };
+
+        const textPart = {
+            text: instructionPrompt
+        };
+
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: { parts: [audioPart, textPart] },
+            config: {
+                responseMimeType: 'application/json',
+                responseSchema: storyIdeasSchema, // Re-use the existing schema
+            }
+        });
+
+        const structuredPrompt: UserPrompt = JSON.parse(response.text);
+        return structuredPrompt;
+
+    } catch (error) {
+        console.error("Error transcribing and structuring audio:", error);
+        throw new Error("Failed to understand your story idea from the audio. The AI might be a bit sleepy. Please try speaking clearly or try again.");
     }
 }

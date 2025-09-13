@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { StoryPromptForm } from '../components/StoryPromptForm';
 import { LoadingIndicator } from '../components/LoadingIndicator';
-import { generateStoryAndImages, generateStoryIdeas } from '../services/geminiService';
+import { generateStoryAndImages, generateStoryIdeas, generateTitle } from '../services/geminiService';
 import type { GeneratedStory, UserPrompt, Character } from '../types';
 import { useSettings } from '../contexts/SettingsContext';
 import { storyLayouts } from '../layouts';
@@ -43,11 +43,15 @@ export const CreatorView: React.FC<CreatorViewProps> = ({ characters, onStoryGen
     const handleGenerateStory = useCallback(async () => {
         setIsLoading(true);
         setError(null);
-        setLoadingMessage('Once upon a time, our AI storyteller is waking up...');
-
+        
         try {
+            setLoadingMessage('Dreaming up a title...');
+            const title = await generateTitle(prompt);
+
+            setLoadingMessage('Crafting a wondrous tale just for you...');
             const aspectRatio = storyLayouts[storyLayout].aspectRatio;
-            const { title, parts } = await generateStoryAndImages(prompt, setLoadingMessage, aspectRatio);
+            const parts = await generateStoryAndImages(prompt, setLoadingMessage, aspectRatio);
+            
             onStoryGenerated({ title, parts, prompt, layout: storyLayout });
         } catch (err) {
             console.error(err);
@@ -59,7 +63,7 @@ export const CreatorView: React.FC<CreatorViewProps> = ({ characters, onStoryGen
     }, [prompt, onStoryGenerated, storyLayout]);
 
     return (
-         <div className="w-full max-w-xl mx-auto">
+         <div className="w-full max-w-3xl mx-auto">
             {!isLoading && (
                 <StoryPromptForm 
                     prompt={prompt}

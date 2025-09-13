@@ -38,8 +38,11 @@ export const encodeStory = (story: SavedStory): string => {
   };
 
   const jsonString = JSON.stringify(storyForSharing);
-  // Using btoa for simplicity, which works well for browser environments.
-  return btoa(jsonString);
+  // This robustly handles UTF-8 characters before encoding to Base64, avoiding errors with `btoa`.
+  const utf8Encoded = encodeURIComponent(jsonString).replace(/%([0-9A-F]{2})/g,
+    (match, p1) => String.fromCharCode(parseInt(p1, 16))
+  );
+  return btoa(utf8Encoded);
 };
 
 /**
@@ -50,7 +53,14 @@ export const encodeStory = (story: SavedStory): string => {
  */
 export const decodeStory = (code: string): DecodedStory => {
   try {
-    const jsonString = atob(code);
+    // This robustly decodes from Base64 and handles UTF-8 characters correctly.
+    const binaryString = atob(code);
+    const jsonString = decodeURIComponent(
+        Array.prototype.map.call(binaryString, (c) => {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join('')
+    );
+
     const data = JSON.parse(jsonString);
     // Basic validation to ensure it looks like a story
     if (data.title && data.parts && data.prompt && Array.isArray(data.parts) && (data.parts.length === 0 || (data.parts[0].paragraph && data.parts[0].imagePrompt))) {

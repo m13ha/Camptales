@@ -2,6 +2,7 @@ import React from 'react';
 import { useSettings, HistoryRetentionPeriod } from '../contexts/SettingsContext';
 import { themes, fonts, fontSizes } from '../themes';
 import { storyLayouts, StoryLayout } from '../layouts';
+import { Select } from '../components/ui/Select';
 
 const retentionOptions: { value: HistoryRetentionPeriod, label: string }[] = [
     { value: '3d', label: '3 days' },
@@ -91,32 +92,26 @@ export const SettingsView: React.FC = () => {
             <div>
                 <h3 className="font-bold text-[--text-primary] mb-4">Typography</h3>
                 <div className="space-y-6">
-                    <div>
-                        <label htmlFor="font-style" className="block mb-2 text-sm font-medium text-[--text-secondary]">Font Style</label>
-                        <select
-                            id="font-style"
-                            value={fontStyle}
-                            onChange={(e) => setFontStyle(e.target.value as keyof typeof fonts)}
-                            className="w-[90%] px-4 py-2.5 bg-[--input-background] border-2 border-[--border] rounded-lg text-[--text-primary] focus:outline-none focus:ring-2 focus:ring-[--primary] focus:border-[--primary]"
-                        >
-                            {Object.keys(fonts).map(fontName => (
-                                <option key={fontName} value={fontName}>{fontName}</option>
-                            ))}
-                        </select>
-                    </div>
-                     <div>
-                        <label htmlFor="font-size" className="block mb-2 text-sm font-medium text-[--text-secondary]">Text Size</label>
-                        <select
-                            id="font-size"
-                            value={fontSize}
-                            onChange={(e) => setFontSize(e.target.value as keyof typeof fontSizes)}
-                            className="w-[90%] px-4 py-2.5 bg-[--input-background] border-2 border-[--border] rounded-lg text-[--text-primary] focus:outline-none focus:ring-2 focus:ring-[--primary] focus:border-[--primary]"
-                        >
-                            {Object.keys(fontSizes).map(sizeName => (
-                                <option key={sizeName} value={sizeName}>{sizeName}</option>
-                            ))}
-                        </select>
-                    </div>
+                    <Select
+                        id="font-style"
+                        label="Font Style"
+                        value={fontStyle}
+                        onChange={(e) => setFontStyle(e.target.value as keyof typeof fonts)}
+                    >
+                        {Object.keys(fonts).map(fontName => (
+                            <option key={fontName} value={fontName}>{fontName}</option>
+                        ))}
+                    </Select>
+                     <Select
+                        id="font-size"
+                        label="Text Size"
+                        value={fontSize}
+                        onChange={(e) => setFontSize(e.target.value as keyof typeof fontSizes)}
+                    >
+                        {Object.keys(fontSizes).map(sizeName => (
+                            <option key={sizeName} value={sizeName}>{sizeName}</option>
+                        ))}
+                    </Select>
                 </div>
             </div>
 
@@ -160,21 +155,16 @@ export const SettingsView: React.FC = () => {
 
             <div>
                 <h2 className="text-xl font-bold text-[--text-primary] mb-4">History Settings</h2>
-                <div>
-                    <label htmlFor="history-retention" className="block mb-2 text-sm font-medium text-[--text-secondary]">
-                        Automatically delete stories from history after
-                    </label>
-                    <select
-                        id="history-retention"
-                        value={historyRetention}
-                        onChange={(e) => setHistoryRetention(e.target.value as HistoryRetentionPeriod)}
-                        className="w-[90%] px-4 py-2.5 bg-[--input-background] border-2 border-[--border] rounded-lg text-[--text-primary] focus:outline-none focus:ring-2 focus:ring-[--primary] focus:border-[--primary]"
-                    >
-                        {retentionOptions.map(option => (
-                            <option key={option.value} value={option.value}>{option.value}</option>
-                        ))}
-                    </select>
-                </div>
+                <Select
+                    id="history-retention"
+                    label="Automatically delete stories from history after"
+                    value={historyRetention}
+                    onChange={(e) => setHistoryRetention(e.target.value as HistoryRetentionPeriod)}
+                >
+                    {retentionOptions.map(option => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                </Select>
             </div>
         </div>
     </div>

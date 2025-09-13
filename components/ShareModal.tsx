@@ -4,6 +4,8 @@ import { encodeStory } from '../utils/storyShare';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
+import { ShareIcon } from './icons/ShareIcon';
+import { CopyIcon } from './icons/CopyIcon';
 
 interface ShareModalProps {
   story: SavedStory;
@@ -13,14 +15,22 @@ interface ShareModalProps {
 
 export const ShareModal: React.FC<ShareModalProps> = ({ story, isOpen, onClose }) => {
   const [shareLink, setShareLink] = useState('');
-  const [copied, setCopied] = useState(false);
+  const [showCopiedMessage, setShowCopiedMessage] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [canShare, setCanShare] = useState(false);
+
+  useEffect(() => {
+    // Check for navigator.share and ensure it's in a client-side context
+    if (typeof window !== 'undefined' && navigator.share) {
+      setCanShare(true);
+    }
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
       // Reset state on open
       setError(null);
-      setCopied(false);
+      setShowCopiedMessage(false);
       setShareLink('');
 
       try {
@@ -37,10 +47,27 @@ export const ShareModal: React.FC<ShareModalProps> = ({ story, isOpen, onClose }
   }, [isOpen, story]);
 
   const handleCopy = () => {
-    if (!shareLink) return;
-    navigator.clipboard.writeText(shareLink);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (!shareLink || showCopiedMessage) return;
+    navigator.clipboard.writeText(shareLink).then(() => {
+      setShowCopiedMessage(true);
+      setTimeout(() => setShowCopiedMessage(false), 2500);
+    }).catch(err => {
+      console.error('Failed to copy text: ', err);
+    });
+  };
+  
+  const handleWebShare = async () => {
+    if (!shareLink || !canShare) return;
+    try {
+      await navigator.share({
+        title: story.title,
+        text: `Check out this story I made: "${story.title}"`,
+        url: shareLink,
+      });
+    } catch (err) {
+      // This error often happens if the user cancels the share dialog, so we can safely ignore it.
+      console.log('Web Share API error:', err);
+    }
   };
 
   return (
@@ -51,24 +78,40 @@ export const ShareModal: React.FC<ShareModalProps> = ({ story, isOpen, onClose }
             <p>{error}</p>
         </div>
       ) : (
-        <>
-          <p className="text-[--text-secondary] mb-4">
-            Copy this link and send it to a friend. They can import your story into their library!
+        <div className="space-y-4">
+          <p className="text-[--text-secondary]">
+            Send this link to a friend so they can import your story into their library!
           </p>
-          <Input
-            id="share-link"
-            label="Shareable Link"
-            value={shareLink}
-            readOnly
-            className="font-mono text-sm"
-            onClick={(e) => (e.target as HTMLInputElement).select()}
-          />
-          <div className="mt-4 text-right">
-            <Button onClick={handleCopy} disabled={copied || !shareLink}>
-              {copied ? 'Link Copied!' : 'Copy Link'}
+          <div>
+            <Input
+              id="share-link"
+              label="Shareable Link"
+              value={shareLink}
+              readOnly
+              className="font-mono text-sm"
+              onClick={(e) => (e.target as HTMLInputElement).select()}
+            />
+            <div className="h-5 mt-1">
+                {showCopiedMessage && (
+                  <p className="text-sm text-green-400 animate-fade-in" aria-live="polite">
+                    Link copied to clipboard!
+                  </p>
+                )}
+            </div>
+          </div>
+          <div className="flex flex-col sm:flex-row justify-end items-center gap-3 pt-2">
+            {canShare && (
+              <Button onClick={handleWebShare} size="md" className="w-full sm:w-auto">
+                <ShareIcon className="w-5 h-5 mr-2" />
+                Share via...
+              </Button>
+            )}
+            <Button onClick={handleCopy} disabled={!shareLink} size="md" className="w-full sm:w-auto">
+              <CopyIcon className="w-5 h-5 mr-2" />
+              Copy Link
             </Button>
           </div>
-        </>
+        </div>
       )}
     </Modal>
   );
