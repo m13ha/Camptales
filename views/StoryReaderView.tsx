@@ -24,7 +24,7 @@ export const StoryReaderView: React.FC<StoryReaderViewProps> = ({ story, onBack,
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [currentSpeechIndex, setCurrentSpeechIndex] = useState(-1);
   const [isExporting, setIsExporting] = useState(false);
-  const { speechRate, speechPitch } = useSettings();
+  const { speechRate, speechPitch, speechVoice } = useSettings();
 
   // Guard clause to prevent crashes from malformed story data (e.g., from old storage versions)
   if (!story || !Array.isArray(story.parts)) {
@@ -64,57 +64,69 @@ export const StoryReaderView: React.FC<StoryReaderViewProps> = ({ story, onBack,
             const pageWidth = doc.internal.pageSize.getWidth();
             const pageHeight = doc.internal.pageSize.getHeight();
             const margin = 40;
-            const maxWidth = pageWidth - margin * 2;
-            let y = margin; // Current Y position
+            const contentWidth = pageWidth - margin * 2;
+            let yPos = margin;
 
-            // Story Title
+            // --- 1. Add Story Title ---
+            // The title is set in a larger, bold font and centered.
+            // It's also wrapped if it's too long to fit on one line.
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(24);
-            const titleLines = doc.splitTextToSize(story.title, maxWidth);
-            doc.text(titleLines, pageWidth / 2, y, { align: 'center' });
-            y += doc.getTextDimensions(titleLines).h + 30;
+            const titleLines = doc.splitTextToSize(story.title, contentWidth);
+            doc.text(titleLines, pageWidth / 2, yPos, { align: 'center' });
+            yPos += doc.getTextDimensions(titleLines).h + 30; // Add space after title
 
-            // Reset font for paragraphs
+            // --- 2. Add Story Parts (Image + Paragraph) ---
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(12);
             
             for (const part of story.parts) {
-                const imageMaxHeight = 300;
-                
-                // Add Image
-                const img = new Image();
-                img.src = part.imageUrl!;
-                await new Promise(resolve => { img.onload = resolve; });
+                if (!part.imageUrl) continue; // Skip parts without images
 
+                const imageMaxHeight = pageHeight * 0.4; // Max 40% of page height
+
+                // --- Image Processing ---
+                const img = new Image();
+                img.src = part.imageUrl;
+                // This ensures the image is loaded before we try to add it to the PDF
+                await new Promise(resolve => { img.onload = resolve; img.onerror = resolve; });
+
+                // Scale image to fit content width while maintaining aspect ratio
                 const imgRatio = img.width / img.height;
-                let imgWidth = maxWidth;
+                let imgWidth = contentWidth;
                 let imgHeight = imgWidth / imgRatio;
 
+                // If the scaled image is too tall, scale it down based on max height
                 if (imgHeight > imageMaxHeight) {
                     imgHeight = imageMaxHeight;
                     imgWidth = imgHeight * imgRatio;
                 }
                 
-                const imgX = (pageWidth - imgWidth) / 2;
+                const imgX = (pageWidth - imgWidth) / 2; // Center the image
 
-                // Add Paragraph Text
-                const textLines = doc.splitTextToSize(part.paragraph, maxWidth);
+                // --- Text Processing ---
+                // The text is wrapped to fit the content width.
+                const textLines = doc.splitTextToSize(part.paragraph, contentWidth);
                 const textHeight = doc.getTextDimensions(textLines).h;
 
-                // Check for page break
-                if (y + imgHeight + textHeight + 20 > pageHeight - margin) {
+                // --- Page Break Logic ---
+                // Check if the current part (image + text) fits on the remaining page space.
+                // If not, add a new page before drawing this part.
+                if (yPos + imgHeight + textHeight + 20 > pageHeight - margin) {
                     doc.addPage();
-                    y = margin;
+                    yPos = margin; // Reset y-position for the new page
                 }
 
-                doc.addImage(img.src, 'PNG', imgX, y, imgWidth, imgHeight);
-                y += imgHeight + 20;
+                // --- Drawing Content ---
+                doc.addImage(img.src, 'PNG', imgX, yPos, imgWidth, imgHeight);
+                yPos += imgHeight + 20; // Move y-position down past the image
                 
-                doc.text(textLines, margin, y);
-                y += textHeight + 40; // Space before next part
+                doc.text(textLines, margin, yPos);
+                yPos += textHeight + 40; // Add space before the next story part
             }
             
-            // Sanitize filename
+            // --- 3. Save the PDF ---
+            // The filename is sanitized to remove special characters.
             const sanitizedTitle = story.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
             doc.save(`${sanitizedTitle || 'story'}.pdf`);
 
@@ -142,9 +154,15 @@ export const StoryReaderView: React.FC<StoryReaderViewProps> = ({ story, onBack,
         speechSynthesis.cancel(); // Clear any leftovers just in case
 
         const partsToRead = story.parts;
+        const voices = speechSynthesis.getVoices();
+        const selectedVoice = speechVoice ? voices.find(v => v.name === speechVoice) : null;
+        
         partsToRead.forEach((part, index) => {
             const utterance = new SpeechSynthesisUtterance(part.paragraph);
             
+            if (selectedVoice) {
+                utterance.voice = selectedVoice;
+            }
             utterance.rate = speechRate;
             utterance.pitch = speechPitch;
 
@@ -171,7 +189,7 @@ export const StoryReaderView: React.FC<StoryReaderViewProps> = ({ story, onBack,
             speechSynthesis.speak(utterance);
         });
     }
-  }, [isSpeaking, story.parts, speechRate, speechPitch]);
+  }, [isSpeaking, story.parts, speechRate, speechPitch, speechVoice]);
 
   const canBeShared = 'createdAt' in story;
 

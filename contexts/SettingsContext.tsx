@@ -21,6 +21,8 @@ interface SettingsContextType {
   setSpeechRate: (rate: number) => void;
   speechPitch: number;
   setSpeechPitch: (pitch: number) => void;
+  speechVoice: string | null;
+  setSpeechVoice: (voiceName: string | null) => void;
   storyLayout: StoryLayout;
   setStoryLayout: (layout: StoryLayout) => void;
 }
@@ -34,6 +36,7 @@ const defaultSettings = {
   historyRetention: '7d' as HistoryRetentionPeriod,
   speechRate: 1,
   speechPitch: 1,
+  speechVoice: null as string | null,
   storyLayout: 'classic' as StoryLayout,
 };
 
@@ -45,6 +48,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [historyRetention, setHistoryRetention] = useState<HistoryRetentionPeriod>(defaultSettings.historyRetention);
   const [speechRate, setSpeechRate] = useState<number>(defaultSettings.speechRate);
   const [speechPitch, setSpeechPitch] = useState<number>(defaultSettings.speechPitch);
+  const [speechVoice, setSpeechVoice] = useState<string | null>(defaultSettings.speechVoice);
   const [storyLayout, setStoryLayout] = useState<StoryLayout>(defaultSettings.storyLayout);
   
   // Hook to interact with the 'settings' store in IndexedDB
@@ -60,6 +64,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           setHistoryRetention(settingsMap.get('history-retention') ?? defaultSettings.historyRetention);
           setSpeechRate(settingsMap.get('speech-rate') ?? defaultSettings.speechRate);
           setSpeechPitch(settingsMap.get('speech-pitch') ?? defaultSettings.speechPitch);
+          setSpeechVoice(settingsMap.get('speech-voice') ?? defaultSettings.speechVoice);
           setStoryLayout(settingsMap.get('story-layout') ?? defaultSettings.storyLayout);
       }
   }, [settingsFromDB, settingsLoading]);
@@ -120,6 +125,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setSpeechRate: createSetter(setSpeechRate, 'speech-rate'),
     speechPitch,
     setSpeechPitch: createSetter(setSpeechPitch, 'speech-pitch'),
+    speechVoice,
+    setSpeechVoice: createSetter(setSpeechVoice, 'speech-voice'),
     storyLayout,
     setStoryLayout: createSetter(setStoryLayout, 'story-layout'),
   };
