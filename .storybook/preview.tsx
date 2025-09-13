@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import type { Preview, Decorator } from '@storybook/react';
-import { SettingsProvider, useSettings } from '../contexts/SettingsContext';
-import { themes, fonts, fontSizes } from '../themes';
+import { SettingsProvider, useSettings } from '../src/contexts/SettingsContext';
+import { themes, fonts, fontSizes } from '../src/themes';
 
 // Wrapper to apply dynamic theme variables from SettingsContext
 const ThemeWrapper = ({ children }: { children: React.ReactNode }) => {

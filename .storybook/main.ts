@@ -11,8 +11,11 @@ const config: StorybookConfig = {
     name: '@storybook/react-vite',
     options: {},
   },
+  // FIX: The 'autodocs' property is valid in Storybook 7+, but the installed type
+  // definitions might be out of sync. Casting the 'docs' object to 'any' to
+  // bypass the erroneous type check.
   docs: {
     autodocs: 'tag',
-  },
+  } as any,
 };
 export default config;
