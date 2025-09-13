@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { SavedStory, StoryPart } from '../types';
 import { decodeStory, DecodedStory } from '../utils/storyShare';
 import { generateStoryIllustration } from '../services/geminiService';
@@ -12,14 +12,25 @@ interface ImportModalProps {
   isOpen: boolean;
   onClose: () => void;
   onImport: (storyData: Omit<SavedStory, 'id' | 'createdAt'>) => void;
+  initialCode?: string | null;
 }
 
-export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImport }) => {
+export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImport, initialCode }) => {
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [importMessage, setImportMessage] = useState('');
   const { storyLayout: currentUserLayout } = useSettings();
+
+  useEffect(() => {
+    if (isOpen) {
+        setCode(initialCode || '');
+        setError(null);
+        setIsImporting(false);
+        setImportMessage('');
+    }
+  }, [isOpen, initialCode]);
+
 
   const handleImport = async () => {
     if (!code.trim()) {
@@ -71,14 +82,8 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImp
     }
   };
 
-  const handleClose = () => {
-    setCode('');
-    setError(null);
-    onClose();
-  };
-
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Import a Story">
+    <Modal isOpen={isOpen} onClose={onClose} title="Import a Story">
       {isImporting ? (
         <div className="text-center p-4">
            <svg className="animate-spin mx-auto h-8 w-8 text-[--primary] mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -102,7 +107,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImp
           />
           {error && <p className="text-red-400 mt-2 text-sm">{error}</p>}
           <div className="mt-4 flex justify-end gap-2">
-            <Button onClick={handleClose} variant="primary" className="!bg-gray-600 hover:!bg-gray-700">Cancel</Button>
+            <Button onClick={onClose} variant="primary" className="!bg-gray-600 hover:!bg-gray-700">Cancel</Button>
             <Button onClick={handleImport}>Import Story</Button>
           </div>
         </>

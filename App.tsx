@@ -9,6 +9,7 @@ import { SettingsView } from './views/SettingsView';
 import { StoryReaderView } from './views/StoryReaderView';
 import { HistoryView } from './views/HistoryView';
 import { useSettings } from './contexts/SettingsContext';
+import { decodeStory } from './utils/storyShare';
 
 type View = 'create' | 'stories' | 'characters' | 'settings' | 'reader' | 'history';
 
@@ -21,7 +22,29 @@ const App: React.FC = () => {
   const { data: history, addItem: addHistoryItem, deleteItem: deleteHistoryItem, deleteMultipleItems: deleteHistoryItems } = useIndexedDB<HistoryItem>('history');
   
   const [storyForReader, setStoryForReader] = useState<GeneratedStory | SavedStory | HistoryItem | null>(null);
+  const [importCode, setImportCode] = useState<string | null>(null);
   const { historyRetention } = useSettings();
+
+  // Effect to handle importing a story from a URL parameter
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const storyCode = urlParams.get('import');
+    if (storyCode) {
+        try {
+            // Validate the code before proceeding
+            decodeStory(storyCode);
+            setImportCode(storyCode);
+            setCurrentView('stories');
+        } catch (error) {
+            console.error("Invalid import code in URL:", error);
+            alert("The story link appears to be invalid or corrupted.");
+        } finally {
+            // Clean the URL to prevent re-triggering on refresh
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    }
+  }, []);
+
 
   // Effect to clean up old history items
   useEffect(() => {
@@ -176,6 +199,8 @@ const App: React.FC = () => {
             onView={handleReadStory}
             onDelete={handleDeleteStory}
             onImport={handleImportStory}
+            importCodeFromUrl={importCode}
+            onImportCodeUsed={() => setImportCode(null)}
           />
         )}
         {currentView === 'history' && (

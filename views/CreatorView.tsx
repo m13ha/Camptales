@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { StoryPromptForm } from '../components/StoryPromptForm';
 import { LoadingIndicator } from '../components/LoadingIndicator';
 import { generateStoryAndImages, generateStoryIdeas } from '../services/geminiService';
@@ -24,25 +24,21 @@ export const CreatorView: React.FC<CreatorViewProps> = ({ characters, onStoryGen
         concept: 'The importance of perseverance and asking for help'
     });
     const [isLoadingIdeas, setIsLoadingIdeas] = useState(false);
+    const [category, setCategory] = useState<string>('Surprise Me!');
 
-    useEffect(() => {
-        const hasGenerated = sessionStorage.getItem('ideas_generated');
-        if (!hasGenerated) {
-            setIsLoadingIdeas(true);
-            generateStoryIdeas()
-                .then(ideas => {
-                    setPrompt(ideas);
-                    sessionStorage.setItem('ideas_generated', 'true');
-                })
-                .catch(err => {
-                    console.error("Failed to generate story ideas", err);
-                    // Keep default prompt on error
-                })
-                .finally(() => {
-                    setIsLoadingIdeas(false);
-                });
+    const handleGenerateIdeas = useCallback(async () => {
+        setIsLoadingIdeas(true);
+        setError(null);
+        try {
+            const ideas = await generateStoryIdeas(category);
+            setPrompt(ideas);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'An unknown error occurred while brainstorming.');
+        } finally {
+            setIsLoadingIdeas(false);
         }
-    }, []);
+    }, [category]);
+
 
     const handleGenerateStory = useCallback(async () => {
         setIsLoading(true);
@@ -69,8 +65,12 @@ export const CreatorView: React.FC<CreatorViewProps> = ({ characters, onStoryGen
                     prompt={prompt}
                     onPromptChange={setPrompt}
                     onSubmit={handleGenerateStory} 
-                    isLoading={isLoading || isLoadingIdeas} 
-                    characters={characters} 
+                    isLoading={isLoading || isLoadingIdeas}
+                    characters={characters}
+                    onGenerateIdeas={handleGenerateIdeas}
+                    isGeneratingIdeas={isLoadingIdeas}
+                    category={category}
+                    onCategoryChange={setCategory}
                 />
             )}
             

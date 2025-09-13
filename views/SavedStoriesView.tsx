@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { SavedStory } from '../types';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -12,10 +12,25 @@ interface SavedStoriesViewProps {
   onView: (story: SavedStory) => void;
   onDelete: (storyId: string) => void;
   onImport: (storyData: Omit<SavedStory, 'id' | 'createdAt'>) => void;
+  importCodeFromUrl?: string | null;
+  onImportCodeUsed?: () => void;
 }
 
-export const SavedStoriesView: React.FC<SavedStoriesViewProps> = ({ stories, onView, onDelete, onImport }) => {
+export const SavedStoriesView: React.FC<SavedStoriesViewProps> = ({ stories, onView, onDelete, onImport, importCodeFromUrl, onImportCodeUsed }) => {
     const [isImportModalOpen, setImportModalOpen] = useState(false);
+
+    useEffect(() => {
+        if (importCodeFromUrl) {
+            setImportModalOpen(true);
+        }
+    }, [importCodeFromUrl]);
+    
+  const handleModalClose = () => {
+    setImportModalOpen(false);
+    if (onImportCodeUsed) {
+        onImportCodeUsed();
+    }
+  };
     
   return (
     <div>
@@ -30,8 +45,9 @@ export const SavedStoriesView: React.FC<SavedStoriesViewProps> = ({ stories, onV
 
         <ImportModal 
             isOpen={isImportModalOpen}
-            onClose={() => setImportModalOpen(false)}
+            onClose={handleModalClose}
             onImport={onImport}
+            initialCode={importCodeFromUrl}
         />
 
         {stories.length === 0 ? (

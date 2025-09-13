@@ -50,16 +50,21 @@ const storyIdeasSchema = {
     required: ["character", "setting", "plot", "concept"]
 };
 
-export const generateStoryIdeas = async (): Promise<UserPrompt> => {
+export const generateStoryIdeas = async (category: string = 'Surprise Me!'): Promise<UserPrompt> => {
     try {
-        const prompt = `Generate a creative and whimsical bedtime story idea for a child.
-        Provide a main character, a setting, a plot, and a moral or concept.
-        The ideas should be unique, imaginative, and spark creativity.
-        Return the response as a JSON object with keys: 'character', 'setting', 'plot', 'concept'.`;
+        let generationPrompt: string;
+        if (category === 'Surprise Me!' || !category) {
+            generationPrompt = `Generate a creative and whimsical bedtime story idea for a child. The ideas should be unique, imaginative, and spark creativity.`;
+        } else {
+            generationPrompt = `Generate a creative and whimsical bedtime story idea for a child focused on the theme of "${category}". Explain the core concept in a simple, age-appropriate way through the story's plot and moral. The ideas should be unique and imaginative.`;
+        }
+        
+        const fullPrompt = `${generationPrompt}\n\nReturn the response as a JSON object with keys: 'character', 'setting', 'plot', 'concept'. The 'concept' should directly relate to the chosen theme.`;
+
 
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
-            contents: prompt,
+            contents: fullPrompt,
             config: {
                 responseMimeType: 'application/json',
                 responseSchema: storyIdeasSchema,
