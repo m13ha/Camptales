@@ -1,10 +1,32 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
-import useLocalStorage from '../hooks/useLocalStorage';
 import { themes, fonts, fontSizes, Theme } from '../themes';
+import type { StoryLayout } from '../layouts';
 
 type FontStyle = keyof typeof fonts;
 type FontSize = keyof typeof fontSizes;
 export type HistoryRetentionPeriod = '3d' | '7d' | '30d' | 'never';
+
+// Helper to get from localStorage
+const getFromLocalStorage = <T,>(key: string, defaultValue: T): T => {
+    if (typeof window === 'undefined') return defaultValue;
+    try {
+        const item = window.localStorage.getItem(key);
+        return item ? JSON.parse(item) : defaultValue;
+    } catch (error) {
+        console.error(`Error reading localStorage key "${key}":`, error);
+        return defaultValue;
+    }
+};
+
+// Helper to set to localStorage
+const setInLocalStorage = <T,>(key: string, value: T): void => {
+    if (typeof window === 'undefined') return;
+    try {
+        window.localStorage.setItem(key, JSON.stringify(value));
+    } catch (error) {
+        console.error(`Error setting localStorage key "${key}":`, error);
+    }
+};
 
 
 interface SettingsContextType {
@@ -16,17 +38,35 @@ interface SettingsContextType {
   setFontSize: (size: FontSize) => void;
   historyRetention: HistoryRetentionPeriod;
   setHistoryRetention: (period: HistoryRetentionPeriod) => void;
+  speechRate: number;
+  setSpeechRate: (rate: number) => void;
+  speechPitch: number;
+  setSpeechPitch: (pitch: number) => void;
+  storyLayout: StoryLayout;
+  setStoryLayout: (layout: StoryLayout) => void;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [themeName, setThemeName] = useLocalStorage('app-theme', 'cosmicNight');
-  const [fontStyle, setFontStyle] = useLocalStorage<FontStyle>('app-font-style', 'Sans Serif');
-  const [fontSize, setFontSize] = useLocalStorage<FontSize>('app-font-size', 'Medium');
-  const [historyRetention, setHistoryRetention] = useLocalStorage<HistoryRetentionPeriod>('history-retention', '7d');
+  const [themeName, setThemeName] = useState(() => getFromLocalStorage('app-theme', 'cosmicNight'));
+  const [fontStyle, setFontStyle] = useState<FontStyle>(() => getFromLocalStorage('app-font-style', 'Sans Serif'));
+  const [fontSize, setFontSize] = useState<FontSize>(() => getFromLocalStorage('app-font-size', 'Medium'));
+  const [historyRetention, setHistoryRetention] = useState<HistoryRetentionPeriod>(() => getFromLocalStorage('history-retention', '7d'));
+  const [speechRate, setSpeechRate] = useState<number>(() => getFromLocalStorage('speech-rate', 1));
+  const [speechPitch, setSpeechPitch] = useState<number>(() => getFromLocalStorage('speech-pitch', 1));
+  const [storyLayout, setStoryLayout] = useState<StoryLayout>(() => getFromLocalStorage('story-layout', 'classic'));
 
   const theme = useMemo(() => themes[themeName] || themes.cosmicNight, [themeName]);
+
+  // Effects to persist settings changes to localStorage
+  useEffect(() => { setInLocalStorage('app-theme', themeName) }, [themeName]);
+  useEffect(() => { setInLocalStorage('app-font-style', fontStyle) }, [fontStyle]);
+  useEffect(() => { setInLocalStorage('app-font-size', fontSize) }, [fontSize]);
+  useEffect(() => { setInLocalStorage('history-retention', historyRetention) }, [historyRetention]);
+  useEffect(() => { setInLocalStorage('speech-rate', speechRate) }, [speechRate]);
+  useEffect(() => { setInLocalStorage('speech-pitch', speechPitch) }, [speechPitch]);
+  useEffect(() => { setInLocalStorage('story-layout', storyLayout) }, [storyLayout]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -69,6 +109,12 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setFontSize,
     historyRetention,
     setHistoryRetention,
+    speechRate,
+    setSpeechRate,
+    speechPitch,
+    setSpeechPitch,
+    storyLayout,
+    setStoryLayout,
   };
 
   return (

@@ -44,7 +44,7 @@ export const StoryPromptForm: React.FC<StoryPromptFormProps> = ({ onSubmit, isLo
                     value={selectedCharId}
                     onChange={handleCharacterSelection}
                     disabled={isLoading}
-                    className="w-full px-4 py-2.5 bg-[--input-background] border-2 border-[--border] rounded-lg text-[--text-primary] transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[--primary] focus:border-[--primary] disabled:bg-gray-700 disabled:cursor-not-allowed"
+                    className="w-[90%] px-4 py-2.5 bg-[--input-background] border-2 border-[--border] rounded-lg text-[--text-primary] transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[--primary] focus:border-[--primary] disabled:bg-gray-700 disabled:cursor-not-allowed"
                 >
                     <option value="">-- Write a new character --</option>
                     {characters.map(char => (

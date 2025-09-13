@@ -5,7 +5,6 @@ import { UsersIcon } from '../icons/UsersIcon';
 import { SettingsIcon } from '../icons/SettingsIcon';
 import { HistoryIcon } from '../icons/HistoryIcon';
 
-// Fix: Changed 'create' to 'creator' to match the View type used throughout the application.
 type View = 'create' | 'stories' | 'history' | 'characters' | 'settings';
 
 interface BottomNavProps {
@@ -14,7 +13,6 @@ interface BottomNavProps {
 }
 
 const navItems: { id: View; label: string; icon: React.FC<React.SVGProps<SVGSVGElement>> }[] = [
-  // Fix: Changed id from 'create' to 'creator' to align with the updated View type.
   { id: 'create', label: 'Create', icon: CreatorIcon },
   { id: 'stories', label: 'Stories', icon: BookOpenIcon },
   { id: 'history', label: 'History', icon: HistoryIcon },

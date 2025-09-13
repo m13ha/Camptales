@@ -8,7 +8,7 @@ export const Logo: React.FC = () => {
             <MoonIcon className="w-6 h-6 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-[--text-primary]">
-            Story Maker
+            BedTales
           </h1>
         </div>
     );

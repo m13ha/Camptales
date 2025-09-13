@@ -3,6 +3,8 @@ import { StoryPromptForm } from '../components/StoryPromptForm';
 import { LoadingIndicator } from '../components/LoadingIndicator';
 import { generateStoryAndImages, generateStoryIdeas } from '../services/geminiService';
 import type { GeneratedStory, UserPrompt, Character } from '../types';
+import { useSettings } from '../contexts/SettingsContext';
+import { storyLayouts } from '../layouts';
 
 interface CreatorViewProps {
     characters: Character[];
@@ -13,6 +15,7 @@ export const CreatorView: React.FC<CreatorViewProps> = ({ characters, onStoryGen
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [loadingMessage, setLoadingMessage] = useState<string>('');
     const [error, setError] = useState<string | null>(null);
+    const { storyLayout } = useSettings();
     
     const [prompt, setPrompt] = useState<UserPrompt>({
         character: 'A brave little firefly named Flicker',
@@ -47,8 +50,9 @@ export const CreatorView: React.FC<CreatorViewProps> = ({ characters, onStoryGen
         setLoadingMessage('Once upon a time, our AI storyteller is waking up...');
 
         try {
-            const { title, parts } = await generateStoryAndImages(prompt, setLoadingMessage);
-            onStoryGenerated({ title, parts, prompt });
+            const aspectRatio = storyLayouts[storyLayout].aspectRatio;
+            const { title, parts } = await generateStoryAndImages(prompt, setLoadingMessage, aspectRatio);
+            onStoryGenerated({ title, parts, prompt, layout: storyLayout });
         } catch (err) {
             console.error(err);
             setError(err instanceof Error ? err.message : 'An unknown error occurred. Please try again.');
@@ -56,7 +60,7 @@ export const CreatorView: React.FC<CreatorViewProps> = ({ characters, onStoryGen
             setIsLoading(false);
             setLoadingMessage('');
         }
-    }, [prompt, onStoryGenerated]);
+    }, [prompt, onStoryGenerated, storyLayout]);
 
     return (
          <div className="w-full max-w-xl mx-auto">

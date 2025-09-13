@@ -1,6 +1,7 @@
 import React from 'react';
 import { useSettings, HistoryRetentionPeriod } from '../contexts/SettingsContext';
 import { themes, fonts, fontSizes } from '../themes';
+import { storyLayouts, StoryLayout } from '../layouts';
 
 const retentionOptions: { value: HistoryRetentionPeriod, label: string }[] = [
     { value: '3d', label: '3 days' },
@@ -9,8 +10,33 @@ const retentionOptions: { value: HistoryRetentionPeriod, label: string }[] = [
     { value: 'never', label: 'Never' },
 ];
 
+const LayoutPreview: React.FC<{ layout: StoryLayout }> = ({ layout }) => {
+    if (layout === 'classic') {
+        return <div className="h-12 w-full flex items-center gap-2 rounded bg-[--input-background] p-2"><div className="w-1/2 h-full rounded bg-[--primary]/50"></div><div className="w-1/2 h-full space-y-1"><div className="h-1/4 w-full rounded bg-[--text-secondary]/50"></div><div className="h-1/4 w-3/4 rounded bg-[--text-secondary]/50"></div></div></div>;
+    }
+     if (layout === 'cinematic') {
+        return <div className="h-12 w-full flex flex-col items-center gap-1 rounded bg-[--input-background] p-2"><div className="w-full h-1/2 rounded bg-[--primary]/50"></div><div className="w-full h-1/2 space-y-1"><div className="h-1/2 w-full rounded bg-[--text-secondary]/50"></div></div></div>;
+    }
+     if (layout === 'portrait') {
+        return <div className="h-12 w-full flex items-center gap-2 rounded bg-[--input-background] p-2"><div className="w-1/3 h-full rounded bg-[--primary]/50"></div><div className="w-2/3 h-full space-y-1"><div className="h-1/4 w-full rounded bg-[--text-secondary]/50"></div><div className="h-1/4 w-3/4 rounded bg-[--text-secondary]/50"></div></div></div>;
+    }
+    if (layout === 'full-page') {
+        return <div className="h-12 w-full relative rounded bg-[--input-background] p-2"><div className="absolute inset-0 bg-[--primary]/50 rounded"></div><div className="absolute bottom-2 left-2 right-2 h-1/3 rounded bg-black/30 p-1 space-y-1"><div className="h-1/3 w-full rounded bg-white/50"></div><div className="h-1/3 w-3/4 rounded bg-white/50"></div></div></div>
+    }
+    return null;
+}
+
+
 export const SettingsView: React.FC = () => {
-  const { theme, setTheme, fontStyle, setFontStyle, fontSize, setFontSize, historyRetention, setHistoryRetention } = useSettings();
+  const { 
+      theme, setTheme, 
+      fontStyle, setFontStyle, 
+      fontSize, setFontSize, 
+      historyRetention, setHistoryRetention,
+      speechRate, setSpeechRate,
+      speechPitch, setSpeechPitch,
+      storyLayout, setStoryLayout
+    } = useSettings();
 
   return (
     <div>
@@ -41,6 +67,27 @@ export const SettingsView: React.FC = () => {
                 </div>
             </div>
 
+             <div>
+                <h3 className="font-bold text-[--text-primary] mb-4">Story Layout</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {Object.entries(storyLayouts).map(([key, config]) => (
+                        <button
+                            key={key}
+                            onClick={() => setStoryLayout(key as StoryLayout)}
+                            className={`p-4 rounded-lg border-2 text-left transition-all ${
+                                storyLayout === key ? 'border-[--primary] ring-2 ring-[--primary]/50' : 'border-[--border] hover:border-[--primary]/50'
+                            }`}
+                        >
+                            <LayoutPreview layout={key as StoryLayout} />
+                            <div className="mt-2">
+                                <span className="font-semibold text-[--text-primary]">{config.name}</span>
+                                <p className="text-sm text-[--text-secondary]">{config.description}</p>
+                            </div>
+                        </button>
+                    ))}
+                </div>
+            </div>
+
             <div>
                 <h3 className="font-bold text-[--text-primary] mb-4">Typography</h3>
                 <div className="space-y-6">
@@ -50,7 +97,7 @@ export const SettingsView: React.FC = () => {
                             id="font-style"
                             value={fontStyle}
                             onChange={(e) => setFontStyle(e.target.value as keyof typeof fonts)}
-                            className="w-full px-4 py-2.5 bg-[--input-background] border-2 border-[--border] rounded-lg text-[--text-primary] focus:outline-none focus:ring-2 focus:ring-[--primary] focus:border-[--primary]"
+                            className="w-[90%] px-4 py-2.5 bg-[--input-background] border-2 border-[--border] rounded-lg text-[--text-primary] focus:outline-none focus:ring-2 focus:ring-[--primary] focus:border-[--primary]"
                         >
                             {Object.keys(fonts).map(fontName => (
                                 <option key={fontName} value={fontName}>{fontName}</option>
@@ -63,12 +110,50 @@ export const SettingsView: React.FC = () => {
                             id="font-size"
                             value={fontSize}
                             onChange={(e) => setFontSize(e.target.value as keyof typeof fontSizes)}
-                            className="w-full px-4 py-2.5 bg-[--input-background] border-2 border-[--border] rounded-lg text-[--text-primary] focus:outline-none focus:ring-2 focus:ring-[--primary] focus:border-[--primary]"
+                            className="w-[90%] px-4 py-2.5 bg-[--input-background] border-2 border-[--border] rounded-lg text-[--text-primary] focus:outline-none focus:ring-2 focus:ring-[--primary] focus:border-[--primary]"
                         >
                             {Object.keys(fontSizes).map(sizeName => (
                                 <option key={sizeName} value={sizeName}>{sizeName}</option>
                             ))}
                         </select>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h2 className="text-xl font-bold text-[--text-primary] mb-4">Speech Settings</h2>
+                <div className="space-y-6">
+                    <div>
+                        <label htmlFor="speech-rate" className="flex justify-between mb-2 text-sm font-medium text-[--text-secondary]">
+                            <span>Speech Rate</span>
+                            <span>{speechRate.toFixed(1)}x</span>
+                        </label>
+                        <input
+                            type="range"
+                            id="speech-rate"
+                            min="0.5"
+                            max="2"
+                            step="0.1"
+                            value={speechRate}
+                            onChange={(e) => setSpeechRate(parseFloat(e.target.value))}
+                            className="w-full h-2 bg-[--input-background] rounded-lg appearance-none cursor-pointer accent-[--primary]"
+                        />
+                    </div>
+                     <div>
+                        <label htmlFor="speech-pitch" className="flex justify-between mb-2 text-sm font-medium text-[--text-secondary]">
+                            <span>Speech Pitch</span>
+                            <span>{speechPitch.toFixed(1)}</span>
+                        </label>
+                         <input
+                            type="range"
+                            id="speech-pitch"
+                            min="0"
+                            max="2"
+                            step="0.1"
+                            value={speechPitch}
+                            onChange={(e) => setSpeechPitch(parseFloat(e.target.value))}
+                            className="w-full h-2 bg-[--input-background] rounded-lg appearance-none cursor-pointer accent-[--primary]"
+                        />
                     </div>
                 </div>
             </div>
@@ -83,10 +168,10 @@ export const SettingsView: React.FC = () => {
                         id="history-retention"
                         value={historyRetention}
                         onChange={(e) => setHistoryRetention(e.target.value as HistoryRetentionPeriod)}
-                        className="w-full px-4 py-2.5 bg-[--input-background] border-2 border-[--border] rounded-lg text-[--text-primary] focus:outline-none focus:ring-2 focus:ring-[--primary] focus:border-[--primary]"
+                        className="w-[90%] px-4 py-2.5 bg-[--input-background] border-2 border-[--border] rounded-lg text-[--text-primary] focus:outline-none focus:ring-2 focus:ring-[--primary] focus:border-[--primary]"
                     >
                         {retentionOptions.map(option => (
-                            <option key={option.value} value={option.value}>{option.label}</option>
+                            <option key={option.value} value={option.value}>{option.value}</option>
                         ))}
                     </select>
                 </div>

@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import type { UserPrompt, StoryApiResponse, StoryPart } from '../types';
+import type { UserPrompt, StoryApiResponse, StoryPart, AspectRatio } from '../types';
 
 if (!process.env.API_KEY) {
     throw new Error("API_KEY environment variable not set");
@@ -51,31 +51,39 @@ const storyIdeasSchema = {
 };
 
 export const generateStoryIdeas = async (): Promise<UserPrompt> => {
-    const prompt = `Generate a creative and whimsical bedtime story idea for a child.
-    Provide a main character, a setting, a plot, and a moral or concept.
-    The ideas should be unique, imaginative, and spark creativity.
-    Return the response as a JSON object with keys: 'character', 'setting', 'plot', 'concept'.`;
+    try {
+        const prompt = `Generate a creative and whimsical bedtime story idea for a child.
+        Provide a main character, a setting, a plot, and a moral or concept.
+        The ideas should be unique, imaginative, and spark creativity.
+        Return the response as a JSON object with keys: 'character', 'setting', 'plot', 'concept'.`;
 
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
-        config: {
-            responseMimeType: 'application/json',
-            responseSchema: storyIdeasSchema,
-        }
-    });
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: {
+                responseMimeType: 'application/json',
+                responseSchema: storyIdeasSchema,
+            }
+        });
 
-    const ideas: UserPrompt = JSON.parse(response.text);
-    return ideas;
+        const ideas: UserPrompt = JSON.parse(response.text);
+        return ideas;
+    } catch (error) {
+        console.error("Error generating story ideas:", error);
+        // To prevent an "uncaught exception: Object", we ensure we always throw a proper Error.
+        throw new Error("Failed to brainstorm new story ideas. The AI might be taking a nap. Please try again.");
+    }
 };
 
 
 export const generateStoryAndImages = async (
     prompt: UserPrompt,
-    setLoadingMessage: (message: string) => void
+    setLoadingMessage: (message: string) => void,
+    aspectRatio: AspectRatio,
 ): Promise<{ title: string; parts: StoryPart[] }> => {
     
     setLoadingMessage('Crafting a wondrous tale just for you...');
+    console.log("Generating story with prompt:", prompt);
 
     const storyPrompt = `Create a short bedtime story for a child.
     - Main Character: ${prompt.character}
@@ -101,17 +109,23 @@ export const generateStoryAndImages = async (
         }
         throw new Error("There was a problem dreaming up the story. The AI may be busy. Please try again.");
     }
+    
+    console.log("Raw story response from AI:", textResponse.text);
 
     let storyData: StoryApiResponse;
     try {
-        storyData = JSON.parse(textResponse.text);
+        // Sanitize the response: LLMs sometimes wrap JSON in markdown backticks.
+        const sanitizedText = textResponse.text.trim().replace(/^```json\s*/, '').replace(/```$/, '');
+        storyData = JSON.parse(sanitizedText);
     } catch (e) {
-        console.error("Failed to parse story data from AI response:", textResponse.text, e);
+        console.error("Failed to parse story data from AI response. Raw text was:", textResponse.text, "Error:", e);
         throw new Error("The AI's response was not in the expected format. Please try generating the story again.");
     }
+    
+    console.log("Successfully parsed story data:", storyData);
 
-
-    if (!storyData.story || storyData.story.length === 0) {
+    if (!storyData.story || !Array.isArray(storyData.story) || storyData.story.length === 0) {
+        console.error("Parsed story data is missing a valid 'story' array:", storyData);
         throw new Error("The AI failed to generate a valid story structure. Please try again with a different prompt.");
     }
 
@@ -119,6 +133,7 @@ export const generateStoryAndImages = async (
 
     for (const [index, part] of storyData.story.entries()) {
         setLoadingMessage(`Generating illustration ${index + 1} of ${storyData.story.length}...`);
+        console.log(`Generating image for part ${index + 1} with prompt:`, part.imagePrompt);
 
         // Add a delay between image generation calls to avoid hitting rate limits.
         if (index > 0) {
@@ -131,7 +146,7 @@ export const generateStoryAndImages = async (
                 prompt: part.imagePrompt,
                 config: {
                     numberOfImages: 1,
-                    aspectRatio: '1:1',
+                    aspectRatio: aspectRatio,
                     outputMimeType: 'image/png'
                 }
             });
@@ -159,17 +174,19 @@ export const generateStoryAndImages = async (
         }
     }
 
-    return { title: storyData.title, parts: finalStoryParts };
+    const finalStory = { title: storyData.title, parts: finalStoryParts };
+    console.log("Finished generating all story parts:", finalStory);
+    return finalStory;
 };
 
-export const generateStoryIllustration = async (prompt: string): Promise<string> => {
+export const generateStoryIllustration = async (prompt: string, aspectRatio: AspectRatio): Promise<string> => {
     try {
         const imageResult = await ai.models.generateImages({
             model: 'imagen-4.0-generate-001',
             prompt: prompt,
             config: {
                 numberOfImages: 1,
-                aspectRatio: '1:1',
+                aspectRatio: aspectRatio,
                 outputMimeType: 'image/png'
             }
         });
@@ -211,9 +228,16 @@ export const generateCharacterImage = async (description: string): Promise<strin
         const base64ImageBytes = imageResponse.generatedImages[0].image.imageBytes;
         return `data:image/png;base64,${base64ImageBytes}`;
     } catch (error) {
-        if (error instanceof Error && (error.message.toLowerCase().includes('quota') || error.message.toLowerCase().includes('rate limit'))) {
-            throw new Error('The character portrait studio is very busy right now. Please wait a moment and try again.');
+        console.error("Unexpected error in generateCharacterImage:", error);
+        if (error instanceof Error) {
+            if (error.message.toLowerCase().includes('quota') || error.message.toLowerCase().includes('rate limit')) {
+                throw new Error('The character portrait studio is very busy right now. Please wait a moment and try again.');
+            }
+             // Instead of re-throwing the original error, create a new one from its message.
+            // This prevents issues with complex error objects while preserving the message.
+            throw new Error(error.message);
         }
-        throw error;
+        // Fallback for non-Error exceptions.
+        throw new Error('An unexpected error occurred while generating the character portrait.');
     }
 }

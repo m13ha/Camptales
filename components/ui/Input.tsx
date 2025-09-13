@@ -14,7 +14,7 @@ export const Input: React.FC<InputProps> = ({ label, id, className = '', ...prop
       <input
         id={id}
         className={`
-          w-full px-4 py-2 bg-[--input-background] border-2 border-[--border] rounded-lg
+          w-[90%] px-4 py-2 bg-[--input-background] border-2 border-[--border] rounded-lg
           text-[--text-primary] placeholder-[--text-secondary]
           transition duration-200 ease-in-out
           focus:outline-none focus:ring-2 focus:ring-[--primary] focus:border-[--primary]

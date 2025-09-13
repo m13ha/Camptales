@@ -5,6 +5,8 @@ import { generateStoryIllustration } from '../services/geminiService';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
 import { Textarea } from './ui/Textarea';
+import { useSettings } from '../contexts/SettingsContext';
+import { storyLayouts } from '../layouts';
 
 interface ImportModalProps {
   isOpen: boolean;
@@ -17,6 +19,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImp
   const [error, setError] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [importMessage, setImportMessage] = useState('');
+  const { storyLayout: currentUserLayout } = useSettings();
 
   const handleImport = async () => {
     if (!code.trim()) {
@@ -29,6 +32,8 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImp
     try {
       // 1. Decode the story code to get text and image prompts
       const decodedData: DecodedStory = decodeStory(code);
+      const layoutForGeneration = decodedData.layout || currentUserLayout;
+      const aspectRatio = storyLayouts[layoutForGeneration].aspectRatio;
 
       // 2. Re-generate images from the prompts
       const newStoryParts: StoryPart[] = [];
@@ -38,7 +43,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImp
         if (index > 0) {
           await new Promise(resolve => setTimeout(resolve, 3000));
         }
-        const imageUrl = await generateStoryIllustration(part.imagePrompt);
+        const imageUrl = await generateStoryIllustration(part.imagePrompt, aspectRatio);
         newStoryParts.push({
           paragraph: part.paragraph,
           imagePrompt: part.imagePrompt,
@@ -48,8 +53,10 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImp
       
       // 3. Assemble the full story object
       const fullStoryData: Omit<SavedStory, 'id' | 'createdAt'> = {
-        ...decodedData,
+        title: decodedData.title,
+        prompt: decodedData.prompt,
         parts: newStoryParts,
+        layout: layoutForGeneration,
       };
 
       // 4. Pass the complete story to the parent to be saved

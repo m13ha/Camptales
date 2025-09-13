@@ -1,3 +1,9 @@
+// FIX: Import StoryLayout to use it within this file and re-export for other modules.
+import type { StoryLayout } from './layouts';
+export type { StoryLayout };
+
+export type AspectRatio = '1:1' | '16:9' | '3:4' | '4:3' | '9:16';
+
 export interface UserPrompt {
   character: string;
   setting: string;
@@ -7,7 +13,7 @@ export interface UserPrompt {
 
 export interface StoryPart {
   paragraph: string;
-  imageUrl: string;
+  imageUrl?: string; // Made optional to allow storing parts in history without images
   imagePrompt: string;
 }
 
@@ -20,9 +26,10 @@ export interface StoryApiResponse {
 }
 
 export interface GeneratedStory {
-  title: string;
+  title:string;
   parts: StoryPart[];
   prompt: UserPrompt;
+  layout: StoryLayout;
 }
 
 export interface SavedStory extends GeneratedStory {

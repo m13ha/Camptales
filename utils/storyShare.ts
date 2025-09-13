@@ -1,4 +1,4 @@
-import type { SavedStory } from '../types';
+import type { SavedStory, StoryLayout } from '../types';
 
 interface ShareablePart {
   paragraph: string;
@@ -9,6 +9,7 @@ interface ShareablePart {
 // It contains image prompts instead of the full image data.
 export type DecodedStory = Omit<SavedStory, 'id' | 'createdAt' | 'parts'> & {
   parts: ShareablePart[];
+  layout?: StoryLayout; // Layout is optional for backwards compatibility
 };
 
 /**
@@ -20,7 +21,9 @@ export type DecodedStory = Omit<SavedStory, 'id' | 'createdAt' | 'parts'> & {
 export const encodeStory = (story: SavedStory): string => {
   const { id, createdAt, ...shareableData } = story;
 
-  const storyForSharing: DecodedStory = {
+  // The 'shareableData' already includes the layout property.
+  // We just need to transform the parts.
+  const storyForSharing = {
     ...shareableData,
     parts: shareableData.parts.map(part => {
       if (!part.imagePrompt) {
