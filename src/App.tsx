@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { SavedStory, Character, GeneratedStory, HistoryItem, AppSetting, StoryAudio, ApiUsage } from './types';
+import type { SavedStory, Character, GeneratedStory, HistoryItem, AppSetting, StoryAudio } from './types';
 import { useIndexedDB } from './hooks/useIndexedDB';
 import { getAll } from './services/dbService';
 import { Layout } from './components/layout/Layout';
@@ -30,7 +30,6 @@ const App: React.FC = () => {
   const { data: savedCharacters, addItem: addCharacterDB, deleteItem: deleteCharacterDB, clearAllItems: clearCharacters, bulkAddItems: bulkAddCharacters } = useIndexedDB<Character>('characters');
   const { data: history, addItem: addHistoryItem, deleteItem: deleteHistoryItem, deleteMultipleItems: deleteHistoryItems, clearAllItems: clearHistory, bulkAddItems: bulkAddHistory } = useIndexedDB<HistoryItem>('history');
   const { bulkAddItems: bulkAddSettings } = useIndexedDB<AppSetting>('settings');
-  const { bulkAddItems: bulkAddApiUsage } = useIndexedDB<ApiUsage>('apiUsage');
   
   const [storyForReader, setStoryForReader] = useState<GeneratedStory | SavedStory | HistoryItem | null>(null);
   const { historyRetention } = useSettings();
@@ -271,13 +270,11 @@ const App: React.FC = () => {
                 currentHistory,
                 currentCharacters,
                 currentSettings,
-                currentApiUsage
             ] = await Promise.all([
                 getAll<SavedStory>('stories'),
                 getAll<HistoryItem>('history'),
                 getAll<Character>('characters'),
                 getAll<AppSetting>('settings'),
-                getAll<ApiUsage>('apiUsage'),
             ]);
 
             const backupData = {
@@ -285,7 +282,6 @@ const App: React.FC = () => {
                 history: currentHistory,
                 characters: currentCharacters,
                 settings: currentSettings,
-                apiUsage: currentApiUsage,
             };
             const jsonString = JSON.stringify(backupData, null, 2);
             const blob = new Blob([jsonString], { type: 'application/json' });
@@ -322,10 +318,8 @@ const App: React.FC = () => {
                 importPromises.push(bulkAddSettings(data.settings));
             }
 
-            // Conditionally add API usage if it exists in the backup.
-            if (data.apiUsage && Array.isArray(data.apiUsage)) {
-                importPromises.push(bulkAddApiUsage(data.apiUsage));
-            }
+            // The user is right, apiUsage should not be restored.
+            // The rate limiter will recalculate based on imported story creation dates.
 
             await Promise.all(importPromises);
 
