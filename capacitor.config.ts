@@ -14,7 +14,7 @@ const config: CapacitorConfig = {
   },
   plugins: {
     SplashScreen: {
-      launchShowDuration: 3000,
+      launchShowDuration: 5000,
       launchAutoHide: true,
       backgroundColor: "#0c0a1a", // Matches the Cosmic Night theme background
       androidSplashResourceName: "splash",

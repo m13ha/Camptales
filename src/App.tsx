@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { SavedStory, Character, GeneratedStory, HistoryItem, AppSetting, StoryAudio } from './types';
+import type { SavedStory, Character, GeneratedStory, HistoryItem, AppSetting } from './types';
 import { useIndexedDB } from './hooks/useIndexedDB';
 import { getAll } from './services/dbService';
 import { Layout } from './components/layout/Layout';
@@ -16,6 +16,7 @@ import { ReadingSettingsView } from './views/settings/ReadingSettingsView';
 import { DataSettingsView } from './views/settings/DataSettingsView';
 import { AboutView } from './views/settings/AboutView';
 import { ErrorModal } from './components/ui/ErrorModal';
+import { SplashScreen } from './components/SplashScreen';
 
 
 type View = 'create' | 'stories' | 'characters' | 'settings' | 'reader' | 'history';
@@ -25,6 +26,8 @@ const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>('create');
   const [previousView, setPreviousView] = useState<View>('create');
   const [settingsView, setSettingsView] = useState<SettingsViewType>('main');
+  const [isSplashVisible, setIsSplashVisible] = useState(true);
+  const [isSplashFadingOut, setIsSplashFadingOut] = useState(false);
   
   const { data: savedStories, addItem: addStory, deleteItem: deleteStory, deleteMultipleItems: deleteStories, updateItem: updateStory, clearAllItems: clearStories, bulkAddItems: bulkAddStories } = useIndexedDB<SavedStory>('stories');
   const { data: savedCharacters, addItem: addCharacterDB, deleteItem: deleteCharacterDB, clearAllItems: clearCharacters, bulkAddItems: bulkAddCharacters } = useIndexedDB<Character>('characters');
@@ -34,6 +37,25 @@ const App: React.FC = () => {
   const [storyForReader, setStoryForReader] = useState<GeneratedStory | SavedStory | HistoryItem | null>(null);
   const { historyRetention } = useSettings();
   const [appError, setAppError] = useState<string | null>(null);
+
+  // Effect to manage the splash screen visibility for 10 seconds
+  useEffect(() => {
+    // Start the fade-out animation just before the 10-second mark
+    const fadeOutTimer = setTimeout(() => {
+      setIsSplashFadingOut(true);
+    }, 9500); // 10000ms total - 500ms for fade animation
+
+    // Remove the splash screen from the DOM after the animation completes
+    const removeTimer = setTimeout(() => {
+      setIsSplashVisible(false);
+    }, 10000);
+
+    // Cleanup timers on component unmount
+    return () => {
+      clearTimeout(fadeOutTimer);
+      clearTimeout(removeTimer);
+    };
+  }, []);
 
   const showErrorModal = (message: string | Error) => {
     if (typeof message === 'object' && message !== null && 'message' in message) {
@@ -72,7 +94,7 @@ const App: React.FC = () => {
   }, [historyRetention, history, deleteHistoryItems]);
 
 
-  const handleSaveStory = async (storyToSave: GeneratedStory | HistoryItem, audio?: StoryAudio) => {
+  const handleSaveStory = async (storyToSave: GeneratedStory | HistoryItem) => {
     // Check if the story is already saved to prevent creating duplicates.
     const isAlreadySaved = savedStories.some(s => s.title === storyToSave.title && s.prompt.plot === storyToSave.prompt.plot);
     if (isAlreadySaved) {
@@ -85,14 +107,9 @@ const App: React.FC = () => {
 
     // 2. Save story
     const newStory: SavedStory = {
-      title: storyToSave.title,
-      parts: storyToSave.parts,
-      prompt: storyToSave.prompt,
-      layout: storyToSave.layout,
+      ...storyToSave,
       id: `story-${Date.now()}`,
       createdAt: new Date().toISOString(),
-      isFavorite: false,
-      audio,
     };
     await addStory(newStory);
     
@@ -339,81 +356,84 @@ const App: React.FC = () => {
   }) : false;
 
   return (
-    <Layout 
-      currentView={currentView} 
-      setCurrentView={handleSetView}
-      settingsView={settingsView}
-      onBackToSettingsMain={() => setSettingsView('main')}
-    >
-        <ErrorModal 
-            isOpen={!!appError}
-            message={appError}
-            onClose={hideErrorModal}
-        />
-        {currentView === 'create' && (
-          <CreatorView 
-            characters={savedCharacters} 
-            onStoryGenerated={handleReadStory}
-            onError={showErrorModal}
+    <>
+      {isSplashVisible && <SplashScreen isFadingOut={isSplashFadingOut} />}
+      <Layout 
+        currentView={currentView} 
+        setCurrentView={handleSetView}
+        settingsView={settingsView}
+        onBackToSettingsMain={() => setSettingsView('main')}
+      >
+          <ErrorModal 
+              isOpen={!!appError}
+              message={appError}
+              onClose={hideErrorModal}
           />
-        )}
-        {currentView === 'stories' && (
-          <SavedStoriesView 
-            stories={savedStories}
-            onView={handleReadStory}
-            onDelete={handleDeleteStory}
-            onDeleteMultiple={handleDeleteMultipleStories}
-            onBulkImport={handleBulkImportStories}
-            onError={showErrorModal}
-            onToggleFavorite={handleToggleFavoriteStory}
-          />
-        )}
-        {currentView === 'history' && (
-          <HistoryView 
-            historyItems={history}
-            onView={handleReadStory}
-            onSave={handleSaveFromHistory}
-            savedStories={savedStories}
-          />
-        )}
-        {currentView === 'characters' && (
-          <MyCharactersView 
-            characters={savedCharacters}
-            onAdd={handleAddCharacter}
-            onDelete={handleDeleteCharacter}
-            onError={showErrorModal}
-          />
-        )}
-        {currentView === 'settings' && (
-          <>
-            {settingsView === 'main' && <SettingsView onNavigate={setSettingsView} />}
-            {settingsView === 'appearance' && <AppearanceSettingsView />}
-            {settingsView === 'typography' && <TypographySettingsView />}
-            {settingsView === 'reading' && <ReadingSettingsView />}
-            {settingsView === 'data' && (
-              <DataSettingsView 
-                onClearHistory={clearHistory}
-                onClearStories={clearStories}
-                onClearCharacters={clearCharacters}
-                onExport={handleExportData}
-                onImport={handleImportData}
-                onError={showErrorModal}
-              />
-            )}
-            {settingsView === 'about' && <AboutView />}
-          </>
-        )}
-        {currentView === 'reader' && storyForReader && (
-            <StoryReaderView
-                story={storyForReader}
-                onBack={handleBackFromReader}
-                onSave={('createdAt' in storyForReader) ? undefined : handleSaveStory}
-                onUpdateStory={'createdAt' in storyForReader ? handleUpdateStory : undefined}
-                isSaved={isStoryForReaderSaved}
-                onError={showErrorModal}
+          {currentView === 'create' && (
+            <CreatorView 
+              characters={savedCharacters} 
+              onStoryGenerated={handleReadStory}
+              onError={showErrorModal}
             />
-        )}
-    </Layout>
+          )}
+          {currentView === 'stories' && (
+            <SavedStoriesView 
+              stories={savedStories}
+              onView={handleReadStory}
+              onDelete={handleDeleteStory}
+              onDeleteMultiple={handleDeleteMultipleStories}
+              onBulkImport={handleBulkImportStories}
+              onError={showErrorModal}
+              onToggleFavorite={handleToggleFavoriteStory}
+            />
+          )}
+          {currentView === 'history' && (
+            <HistoryView 
+              historyItems={history}
+              onView={handleReadStory}
+              onSave={handleSaveFromHistory}
+              savedStories={savedStories}
+            />
+          )}
+          {currentView === 'characters' && (
+            <MyCharactersView 
+              characters={savedCharacters}
+              onAdd={handleAddCharacter}
+              onDelete={handleDeleteCharacter}
+              onError={showErrorModal}
+            />
+          )}
+          {currentView === 'settings' && (
+            <>
+              {settingsView === 'main' && <SettingsView onNavigate={setSettingsView} />}
+              {settingsView === 'appearance' && <AppearanceSettingsView />}
+              {settingsView === 'typography' && <TypographySettingsView />}
+              {settingsView === 'reading' && <ReadingSettingsView />}
+              {settingsView === 'data' && (
+                <DataSettingsView 
+                  onClearHistory={clearHistory}
+                  onClearStories={clearStories}
+                  onClearCharacters={clearCharacters}
+                  onExport={handleExportData}
+                  onImport={handleImportData}
+                  onError={showErrorModal}
+                />
+              )}
+              {settingsView === 'about' && <AboutView />}
+            </>
+          )}
+          {currentView === 'reader' && storyForReader && (
+              <StoryReaderView
+                  story={storyForReader}
+                  onBack={handleBackFromReader}
+                  onSave={('createdAt' in storyForReader) ? undefined : handleSaveStory}
+                  onUpdateStory={'createdAt' in storyForReader ? handleUpdateStory : undefined}
+                  isSaved={isStoryForReaderSaved}
+                  onError={showErrorModal}
+              />
+          )}
+      </Layout>
+    </>
   );
 };
 

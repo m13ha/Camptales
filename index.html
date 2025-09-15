@@ -10,12 +10,20 @@
     <meta name="msapplication-tap-highlight" content="no" />
     <meta name="color-scheme" content="light dark" />
 
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&display=swap" rel="stylesheet">
+
     <title>BedTales</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
       /* Base styles are minimal; theming is handled by the app via CSS variables */
       body {
         transition: background-color 0.3s ease, color 0.3s ease;
+      }
+      .font-handwritten {
+        font-family: 'Caveat', cursive;
       }
       @keyframes fadeIn {
         from { opacity: 0; transform: scale(0.95); }
@@ -30,6 +38,17 @@
       }
       .animate-fade-in {
         animation: fadeInSimple 0.5s ease-out forwards;
+      }
+      @keyframes fadeOut {
+        from { opacity: 1; }
+        to { opacity: 0; pointer-events: none; }
+      }
+      .splash-fade-out {
+        animation: fadeOut 0.5s ease-out forwards;
+      }
+      @keyframes twinkle {
+        0%, 100% { opacity: 0.2; }
+        50% { opacity: 1; }
       }
       /* Scale down UI on smaller screens */
       @media (max-width: 767px) {
