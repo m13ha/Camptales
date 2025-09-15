@@ -12,7 +12,6 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, React.Disp
             const item = window.localStorage.getItem(key);
             return item ? JSON.parse(item) : initialValue;
         } catch (error) {
-            console.warn(`Error reading localStorage key "${key}":`, error);
             return initialValue;
         }
     });
@@ -21,7 +20,7 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, React.Disp
         try {
             window.localStorage.setItem(key, JSON.stringify(storedValue));
         } catch (error) {
-            console.warn(`Error setting localStorage key "${key}":`, error);
+            // If setting fails, we can't do much, so we'll just ignore it.
         }
     }, [key, storedValue]);
 

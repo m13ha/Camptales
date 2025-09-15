@@ -7,7 +7,6 @@ if (!process.env.API_KEY) {
 export const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const handleApiError = (error: unknown, context: string): Error => {
-    console.error(`Error in ${context}:`, error);
     if (error instanceof Error) {
         const message = error.message.toLowerCase();
         if (message.includes('quota') || message.includes('rate limit') || message.includes('429')) {

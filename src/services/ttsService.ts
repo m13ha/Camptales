@@ -61,9 +61,7 @@ const base64ToArrayBuffer = (base64: string): ArrayBuffer => {
 };
 
 export const generateSpeech = async (text: string, voiceName: string): Promise<Blob> => {
-    console.log(`[TTS] Requesting speech for text: "${text.substring(0, 50)}..." with voice: ${voiceName}`);
     try {
-        console.log('[TTS] Preparing API request...');
         const response = await ai.models.generateContentStream({
             model: 'gemini-2.5-flash-preview-tts',
             contents: [
@@ -85,14 +83,11 @@ export const generateSpeech = async (text: string, voiceName: string): Promise<B
                 },
             },
         });
-        console.log('[TTS] API request sent. Awaiting stream...');
 
         let audioData = '';
         let mimeType = 'audio/L16;rate=24000'; // Default, but should be updated by response
-        let chunkCount = 0;
 
         for await (const chunk of response) {
-            chunkCount++;
             if (chunk.candidates?.[0]?.content?.parts?.[0]?.inlineData) {
                 const inlineData = chunk.candidates[0].content.parts[0].inlineData;
                 if (inlineData.data) {
@@ -100,11 +95,9 @@ export const generateSpeech = async (text: string, voiceName: string): Promise<B
                 }
                 if (inlineData.mimeType && mimeType !== inlineData.mimeType) {
                     mimeType = inlineData.mimeType;
-                    console.log(`[TTS] Received mimeType from API: ${mimeType}`);
                 }
             }
         }
-        console.log(`[TTS] Stream finished. Received ${chunkCount} chunks. Total audio data length: ${audioData.length}`);
 
         if (!audioData) {
             throw new Error("No audio data was returned from the API.");
@@ -115,18 +108,15 @@ export const generateSpeech = async (text: string, voiceName: string): Promise<B
         const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
         const bitsPerSample = 16;
         const numChannels = 1;
-        console.log(`[TTS] Creating WAV with sample rate: ${sampleRate}`);
 
         const pcmData = base64ToArrayBuffer(audioData);
         const wavHeader = createWavHeader(pcmData.byteLength, numChannels, sampleRate, bitsPerSample);
         
         const wavBlob = new Blob([wavHeader, pcmData], { type: 'audio/wav' });
-        console.log(`[TTS] Created WAV blob. Size: ${wavBlob.size} bytes`);
         
         return wavBlob;
 
     } catch (error) {
-        console.error('[TTS] Raw Error:', JSON.stringify(error)); // Log the raw error as a string for better inspection
         throw handleApiError(error, "generate premium AI speech");
     }
 };

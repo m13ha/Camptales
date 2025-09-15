@@ -43,12 +43,12 @@ const App: React.FC = () => {
     // Start the fade-out animation just before the 10-second mark
     const fadeOutTimer = setTimeout(() => {
       setIsSplashFadingOut(true);
-    }, 9500); // 10000ms total - 500ms for fade animation
+    }, 6500); // 10000ms total - 500ms for fade animation
 
     // Remove the splash screen from the DOM after the animation completes
     const removeTimer = setTimeout(() => {
       setIsSplashVisible(false);
-    }, 10000);
+    }, 7000);
 
     // Cleanup timers on component unmount
     return () => {
@@ -63,8 +63,7 @@ const App: React.FC = () => {
     } else if (typeof message === 'string') {
         setAppError(message);
     } else {
-        console.error("Attempted to show non-string/non-error:", message);
-        setAppError("An unexpected error occurred. Please check the console for details.");
+        setAppError("An unexpected error occurred.");
     }
   };
   const hideErrorModal = () => setAppError(null);
@@ -101,7 +100,6 @@ const App: React.FC = () => {
         // If the user is trying to save from the reader and just generated audio,
         // we might still want to update the existing story with the audio.
         // For now, we simply prevent duplicate saves.
-        console.log("Attempted to save a story that is already in the library.");
         return;
     }
 
@@ -312,7 +310,6 @@ const App: React.FC = () => {
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
         } catch (error) {
-            console.error("Failed to export data", error);
             showErrorModal("Could not create backup file. Please try again.");
         }
     };
@@ -343,7 +340,6 @@ const App: React.FC = () => {
             alert("Backup restored successfully! The app will now reload to apply all settings.");
             window.location.reload();
         } catch (error) {
-            console.error("Failed to import data", error);
             showErrorModal(error instanceof Error ? error.message : "An unknown error occurred during import.");
         }
     };

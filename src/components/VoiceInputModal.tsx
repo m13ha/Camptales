@@ -54,7 +54,7 @@ export const VoiceInputModal: React.FC<VoiceInputModalProps> = ({ isOpen, onStop
         cancelAnimationFrame(animationFrameId);
         source.disconnect();
         if (audioContext.state !== 'closed') {
-            audioContext.close().catch(console.error);
+            audioContext.close().catch(() => {});
         }
     };
   }, [isOpen, stream]);

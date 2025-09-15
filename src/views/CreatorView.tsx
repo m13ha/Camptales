@@ -61,7 +61,6 @@ export const CreatorView: React.FC<CreatorViewProps> = ({ characters, onStoryGen
             onStoryGenerated({ title, parts, prompt, layout: storyLayout });
             recordAction('createStory');
         } catch (err) {
-            console.error(err);
             onError(err instanceof Error ? err.message : 'An unknown error occurred. Please try again.');
         } finally {
             setIsLoading(false);

@@ -25,7 +25,6 @@ export function useIndexedDB<T extends DBItem>(storeName: StoreName) {
             } catch (err) {
                  if (isMounted) {
                     setError(`Failed to load data from ${storeName}`);
-                    console.error(err);
                 }
             } finally {
                 if (isMounted) {
@@ -43,7 +42,6 @@ export function useIndexedDB<T extends DBItem>(storeName: StoreName) {
             setData(prev => [item, ...prev.filter(p => p.id !== item.id)]);
         } catch (err) {
             setError(`Failed to add item to ${storeName}`);
-            console.error(err);
             throw err;
         }
     }, [storeName]);
@@ -54,7 +52,6 @@ export function useIndexedDB<T extends DBItem>(storeName: StoreName) {
             setData(prev => prev.map(p => (p.id === item.id ? item : p)));
         } catch (err) {
             setError(`Failed to update item in ${storeName}`);
-            console.error(err);
             throw err;
         }
     }, [storeName]);
@@ -65,7 +62,6 @@ export function useIndexedDB<T extends DBItem>(storeName: StoreName) {
             setData(prev => prev.filter(item => item.id !== id));
         } catch (err) {
             setError(`Failed to delete item from ${storeName}`);
-            console.error(err);
             throw err;
         }
     }, [storeName]);
@@ -76,7 +72,6 @@ export function useIndexedDB<T extends DBItem>(storeName: StoreName) {
             setData(prev => prev.filter(item => !ids.includes(item.id)));
         } catch (err) {
             setError(`Failed to delete multiple items from ${storeName}`);
-            console.error(err);
             throw err;
         }
     }, [storeName]);
@@ -88,7 +83,6 @@ export function useIndexedDB<T extends DBItem>(storeName: StoreName) {
         } catch (err)
  {
             setError(`Failed to clear store ${storeName}`);
-            console.error(err);
             throw err;
         }
     }, [storeName]);
@@ -102,7 +96,6 @@ export function useIndexedDB<T extends DBItem>(storeName: StoreName) {
         } catch (err) {
             const errorMsg = `Failed to bulk add items to ${storeName}`;
             setError(errorMsg);
-            console.error(err);
             throw new Error(errorMsg);
         }
     }, [storeName]);

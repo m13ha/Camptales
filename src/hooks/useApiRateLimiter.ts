@@ -87,7 +87,6 @@ export const useApiRateLimiter = () => {
                 ]);
 
             } catch (error) {
-                console.error("Failed to synchronize API rate limits:", error);
                 // In case of error, default to local storage or initial state
                 setLimits(JSON.parse(window.localStorage.getItem('apiRateLimits') || JSON.stringify(initialLimitsState)));
             } finally {
@@ -112,7 +111,7 @@ export const useApiRateLimiter = () => {
             // Persist immediately to both local storage and IndexedDB
             window.localStorage.setItem('apiRateLimits', JSON.stringify(newLimits));
             add<ApiUsage>('apiUsage', { id: action, count: newCount, lastReset: today })
-                .catch(err => console.error(`Failed to update apiUsage DB for ${action}`, err));
+                .catch(() => {});
             
             return newLimits;
         });

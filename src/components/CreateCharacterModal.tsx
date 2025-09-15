@@ -96,7 +96,6 @@ export const CreateCharacterModal: React.FC<CreateCharacterModalProps> = ({ isOp
       setNewChar(prev => ({ ...prev, imageUrl }));
       recordAction('createCharacter');
     } catch (err) {
-      console.error("Failed to generate preview image:", err);
       const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
       onError(`Could not generate portrait: ${errorMessage}`);
     } finally {

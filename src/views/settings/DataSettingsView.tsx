@@ -41,8 +41,7 @@ export const DataSettingsView: React.FC<DataSettingsViewProps> = ({ onClearHisto
             title: `Confirm Deletion`,
             message: `Are you sure you want to permanently delete all your ${type}?\n\n${description}`,
             onConfirm: () => {
-                clearFunction().catch(err => {
-                    console.error(`Failed to clear ${type}`, err);
+                clearFunction().catch(() => {
                     onError(`An error occurred while clearing your ${type}. Please try again.`);
                 });
                 setModalState(null);

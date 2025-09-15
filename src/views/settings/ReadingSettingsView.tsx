@@ -81,7 +81,6 @@ export const ReadingSettingsView: React.FC = () => {
                      URL.revokeObjectURL(audioUrl);
                 };
             } catch (error) {
-                console.error("Failed to generate AI speech preview:", error);
                 alert("Failed to generate premium AI speech. The AI might be busy or there was a network issue. Please try again.");
             } finally {
                 setIsGeneratingPreview(null);

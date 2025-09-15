@@ -37,7 +37,6 @@ export const ExportModal: React.FC<ExportModalProps> = ({ stories, isOpen, onClo
         URL.revokeObjectURL(url);
         onClose();
     } catch (e) {
-        console.error("Failed to create JSON file:", e);
         alert("Could not create the export file.");
     }
   };

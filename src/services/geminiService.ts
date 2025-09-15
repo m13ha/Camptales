@@ -133,7 +133,6 @@ export const generateStoryAndImages = async (
             };
             contents = { parts: [imagePart, textPart] };
         } catch (error) {
-            console.error("Failed to process character image, falling back to text-only:", error);
             contents = storyPrompt;
         }
     } else {
@@ -161,12 +160,10 @@ export const generateStoryAndImages = async (
         const sanitizedText = textResponse.text.trim().replace(/^```json\s*/, '').replace(/```$/, '');
         storyData = JSON.parse(sanitizedText);
     } catch (e) {
-        console.error("Failed to parse story data from AI response. Raw text was:", textResponse.text, "Error:", e);
         throw new Error("The AI's story response was not in the expected format. Please try generating the story again.");
     }
     
     if (!storyData.story || !Array.isArray(storyData.story) || storyData.story.length === 0) {
-        console.error("Parsed story data is missing a valid 'story' array:", storyData);
         throw new Error("The AI failed to generate a valid story structure. Please try again with a different prompt.");
     }
 

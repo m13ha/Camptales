@@ -42,64 +42,49 @@ export const StoryReaderView: React.FC<StoryReaderViewProps> = ({ story, onBack,
   const isIntentionalCancellationRef = useRef(false);
 
   const handleStop = useCallback(() => {
-    console.log('[AudioReader] handleStop called.');
     isStoppedRef.current = true;
-    console.log('[AudioReader] Stop: isStoppedRef set to true.');
   
     // --- Start of robust cleanup logic ---
   
     // 1. Stop any browser-native speech synthesis first.
-    console.log('[AudioReader] Stop: Cancelling window.speechSynthesis.');
     window.speechSynthesis.cancel();
     
     // 2. Stop and clean up the HTMLAudioElement used for AI TTS.
     if (audioRef.current) {
-        console.log('[AudioReader] Stop: Pausing audio element.');
         audioRef.current.pause();
         audioRef.current.currentTime = 0; // Reset position
     }
   
     // 3. Revoke the object URL to free up memory immediately. This is crucial for AI TTS.
     if (currentAudioUrl.current) {
-        console.log(`[AudioReader] Stop: Revoking Object URL: ${currentAudioUrl.current}`);
         URL.revokeObjectURL(currentAudioUrl.current);
         currentAudioUrl.current = null;
     }
   
     // 4. Fully reset the audio element to prevent any lingering state.
     if (audioRef.current) {
-        console.log('[AudioReader] Stop: Removing src attribute.');
         audioRef.current.removeAttribute('src'); 
-        console.log('[AudioReader] Stop: Calling load() to reset element state.');
         audioRef.current.load();
     }
     // --- End of robust cleanup logic ---
   
     if (isMountedRef.current) {
-      console.log('[AudioReader] Stop: Setting state to "stopped".');
       setPlaybackState('stopped');
       setCurrentSpeechIndex(-1);
-    } else {
-      console.log('[AudioReader] Stop: Component unmounted, skipping state update.');
     }
   }, []);
 
   // Effect to manage the lifecycle of the component and audio player
   useEffect(() => {
-    console.log('[AudioReader] Component MOUNTED.');
     isMountedRef.current = true;
     isStoppedRef.current = true; // Ensure it's stopped on mount
     audioRef.current = new Audio();
     const audioEl = audioRef.current;
 
     const handleAudioEnd = () => {
-      console.log('[AudioReader] Audio element "ended" event fired.');
       if (isMountedRef.current) {
-        console.log('[AudioReader] Component is mounted, handling audio end.');
         setPlaybackState('stopped');
         setCurrentSpeechIndex(-1);
-      } else {
-        console.log('[AudioReader] Component is UNMOUNTED, ignoring audio end.');
       }
     };
 
@@ -107,15 +92,12 @@ export const StoryReaderView: React.FC<StoryReaderViewProps> = ({ story, onBack,
 
     // Return a cleanup function to run on component unmount
     return () => {
-      console.log('[AudioReader] Component UNMOUNTING. Starting cleanup...');
       isMountedRef.current = false;
       handleStop(); // Centralize all cleanup logic
       
       if (audioEl) {
-        console.log('[AudioReader] Cleanup: Removing "ended" event listener.');
         audioEl.removeEventListener('ended', handleAudioEnd);
       }
-      console.log('[AudioReader] Cleanup COMPLETE.');
     };
   }, [handleStop]);
 
@@ -159,16 +141,13 @@ export const StoryReaderView: React.FC<StoryReaderViewProps> = ({ story, onBack,
       const partsToRead = story.parts.filter(p => p.paragraph && p.paragraph.trim());
 
       if (isStoppedRef.current) {
-          console.log('[AudioReader] speakPart entry: Stop flag is true, aborting.');
           return;
       }
       if (index >= partsToRead.length) {
-          console.log('[AudioReader] Finished reading all parts with browser TTS.');
           if (isMountedRef.current) handleStop();
           return;
       }
 
-      console.log(`[AudioReader] Speaking part ${index + 1}/${partsToRead.length} with new settings.`);
       const part = partsToRead[index];
       const utterance = new SpeechSynthesisUtterance(part.paragraph);
 
@@ -181,24 +160,19 @@ export const StoryReaderView: React.FC<StoryReaderViewProps> = ({ story, onBack,
 
       const originalIndex = story.parts.findIndex(p => p === part);
       utterance.onstart = () => {
-          console.log(`[AudioReader] Browser TTS onstart for part ${index + 1}`);
           if (isMountedRef.current) setCurrentSpeechIndex(originalIndex);
       };
       utterance.onend = () => {
-          console.log(`[AudioReader] Browser TTS onend for part ${index + 1}`);
           if (isStoppedRef.current) {
-              console.log('[AudioReader] onend: Stop flag is true, aborting next part.');
               return;
           }
           if (isIntentionalCancellationRef.current) {
-              console.log('[AudioReader] onend: Intentional cancellation detected, not advancing.');
               isIntentionalCancellationRef.current = false; // Reset the flag
               return;
           }
           speakPart(index + 1);
       };
-      utterance.onerror = (event) => {
-          console.error('[AudioReader] Browser TTS onerror event:', event);
+      utterance.onerror = () => {
           if (isMountedRef.current) {
               onError("An error occurred during text-to-speech.");
               handleStop();
@@ -209,23 +183,18 @@ export const StoryReaderView: React.FC<StoryReaderViewProps> = ({ story, onBack,
   }, [story.parts, speechVoice, speechRate, speechPitch, handleStop, onError]);
 
   const handlePlayPause = useCallback(() => {
-      console.log(`[AudioReader] handlePlayPause called. Current state: ${playbackState}`);
       if (playbackState === 'playing') {
           if (ttsEngine === 'ai') {
-              console.log('[AudioReader] Pausing AI audio element.');
               audioRef.current?.pause();
           } else {
-              console.log('[AudioReader] Pausing browser speech synthesis.');
               isIntentionalCancellationRef.current = true;
               window.speechSynthesis.cancel();
           }
           setPlaybackState('paused');
       } else if (playbackState === 'paused') {
           if (ttsEngine === 'ai') {
-              console.log('[AudioReader] Resuming AI audio element.');
               audioRef.current?.play();
           } else {
-              console.log('[AudioReader] Resuming browser speech synthesis by restarting part.');
               if (currentSpeechIndex >= 0) {
                   speakPart(currentSpeechIndex);
               }
@@ -238,11 +207,6 @@ export const StoryReaderView: React.FC<StoryReaderViewProps> = ({ story, onBack,
     const isPlayingBrowser = playbackState === 'playing' && ttsEngine === 'browser' && currentSpeechIndex >= 0;
     if (!isPlayingBrowser) return;
 
-    // Use a ref to track if this is the first run of the effect for the current speech utterance.
-    // This prevents the cancel/restart loop when speech first begins.
-    const hasAppliedSettingsForCurrentPart = speechRate === audioRef.current?.playbackRate && speechPitch; // A simplistic check
-
-    console.log('[AudioReader] Speech property changed. Restarting current utterance.');
     isIntentionalCancellationRef.current = true;
     window.speechSynthesis.cancel();
 
@@ -257,107 +221,78 @@ export const StoryReaderView: React.FC<StoryReaderViewProps> = ({ story, onBack,
 
 
   const handleReadAloudClick = useCallback(async () => {
-    console.log(`[AudioReader] handleReadAloudClick called. Current state: ${playbackState}`);
     if (playbackState !== 'stopped') {
-        console.log('[AudioReader] Playback not stopped, calling handleStop().');
         handleStop();
         return;
     }
 
     isStoppedRef.current = false; // Reset the stop flag before starting.
-    console.log('[AudioReader] Play: isStoppedRef set to false.');
 
     const partsToRead = story.parts.filter(p => p.paragraph && p.paragraph.trim());
     if (partsToRead.length === 0) {
-      console.error("[AudioReader] No readable parts found.");
       onError("This story has no text content to read aloud.");
       return;
     }
 
     if (ttsEngine === 'ai') {
-        console.log('[AudioReader] Using AI TTS engine.');
         const isPremiumVoiceSelected = premiumVoices.some(v => v.id === speechVoice);
         if (!speechVoice || !isPremiumVoiceSelected) {
-            console.error(`[AudioReader] Invalid premium voice selected: ${speechVoice}`);
             onError("Please select a Premium AI voice in Settings to use this feature.");
             return;
         }
 
-        console.log('[AudioReader] Setting state to "buffering".');
         setPlaybackState('buffering');
 
         try {
             let audioBlob: Blob | null = null;
             if ('audio' in story && story.audio && story.audio.voiceId === speechVoice) {
-                console.log('[AudioReader] Using cached audio blob.');
                 audioBlob = story.audio.data;
             } else {
                 const fullText = story.parts.map(p => p.paragraph).join('\n\n');
-                console.log(`[AudioReader] Calling generateSpeech for voice: ${speechVoice}`);
                 audioBlob = await generateSpeech(fullText, speechVoice);
-                console.log('[AudioReader] generateSpeech call finished.');
                 
                 if (!isMountedRef.current || isStoppedRef.current) {
-                  console.log('[AudioReader] Aborting playback: Component unmounted or stop was called during audio generation.');
                   handleStop();
                   return;
                 }
 
-                console.log('[AudioReader] Component is still mounted. Caching new audio blob.');
                 const audioData: StoryAudio = { voiceId: speechVoice, data: audioBlob };
                 if (isSaved && 'id' in story && onUpdateStory) onUpdateStory({ ...(story as SavedStory), audio: audioData });
                 else if (!isSaved && onSave) onSave(story, audioData);
             }
 
             if (audioBlob) {
-                console.log('[AudioReader] Audio blob is available.');
                 if (currentAudioUrl.current) {
-                  console.log(`[AudioReader] Revoking previous Object URL: ${currentAudioUrl.current}`);
                   URL.revokeObjectURL(currentAudioUrl.current);
                 }
                 const newUrl = URL.createObjectURL(audioBlob);
                 currentAudioUrl.current = newUrl;
-                console.log(`[AudioReader] Created new Object URL: ${newUrl}`);
                 
                 if (audioRef.current) {
-                    console.log('[AudioReader] Setting audio element src.');
                     audioRef.current.src = newUrl;
                     audioRef.current.playbackRate = speechRate;
-                    console.log('[AudioReader] Awaiting audio.play().');
                     await audioRef.current.play();
-                    console.log('[AudioReader] audio.play() promise resolved.');
 
                     if (!isMountedRef.current || isStoppedRef.current) {
-                      console.log('[AudioReader] Aborting playback: Component unmounted or stop called immediately after play.');
                       handleStop();
                       return;
                     }
 
-                    console.log('[AudioReader] Setting state to "playing".');
                     setPlaybackState('playing');
-                } else {
-                   console.error('[AudioReader] audioRef.current is null. Cannot play audio.');
                 }
-            } else {
-              console.error('[AudioReader] audioBlob is null after generation/caching. Aborting.');
             }
         } catch (err) {
-            console.error('[AudioReader] Error during AI speech generation/playback:', err);
             if (!isMountedRef.current) {
-              console.log('[AudioReader] Component unmounted during error handling. Aborting further action.');
               return;
             }
             onError(err instanceof Error ? err.message : "An unknown error occurred during AI speech generation.");
             handleStop();
         }
     } else {
-      console.log('[AudioReader] Using browser TTS engine.');
       if (!('speechSynthesis' in window)) {
-        console.error('[AudioReader] browser TTS not supported.');
         onError("Sorry, your browser doesn't support text-to-speech.");
         return;
       }
-      console.log('[AudioReader] Setting state to "playing".');
       setPlaybackState('playing');
       speakPart(0);
     }
