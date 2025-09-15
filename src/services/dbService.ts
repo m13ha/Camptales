@@ -1,7 +1,7 @@
-import type { SavedStory, Character, HistoryItem, AppSetting } from '../types';
+import type { SavedStory, Character, HistoryItem, AppSetting, ApiUsage } from '../types';
 
 const DB_NAME = 'bedtales-db';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 let dbPromise: Promise<IDBDatabase> | null = null;
 
@@ -37,14 +37,17 @@ const initDB = (): Promise<IDBDatabase> => {
             if (!db.objectStoreNames.contains('settings')) {
                 db.createObjectStore('settings', { keyPath: 'id' });
             }
+            if (!db.objectStoreNames.contains('apiUsage')) {
+                db.createObjectStore('apiUsage', { keyPath: 'id' });
+            }
         };
     });
 
     return dbPromise;
 };
 
-type StoreName = 'stories' | 'history' | 'characters' | 'settings';
-type StoreType = SavedStory | HistoryItem | Character | AppSetting;
+type StoreName = 'stories' | 'history' | 'characters' | 'settings' | 'apiUsage';
+type StoreType = SavedStory | HistoryItem | Character | AppSetting | ApiUsage;
 
 export const getAll = async <T extends StoreType>(storeName: StoreName): Promise<T[]> => {
     const db = await initDB();
@@ -65,6 +68,22 @@ export const add = async <T extends StoreType>(storeName: StoreName, item: T): P
         const request = store.put(item); // Use put to add or update
         request.onerror = () => reject(request.error);
         request.onsuccess = () => resolve();
+    });
+};
+
+export const bulkPut = async <T extends StoreType>(storeName: StoreName, items: T[]): Promise<void> => {
+    if (items.length === 0) return;
+    const db = await initDB();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction(storeName, 'readwrite');
+        const store = transaction.objectStore(storeName);
+        
+        items.forEach(item => {
+            store.put(item);
+        });
+
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error);
     });
 };
 
@@ -93,5 +112,16 @@ export const removeMultiple = async (storeName: StoreName, keys: string[]): Prom
 
         transaction.oncomplete = () => resolve();
         transaction.onerror = () => reject(transaction.error);
+    });
+};
+
+export const clearStore = async (storeName: StoreName): Promise<void> => {
+    const db = await initDB();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction(storeName, 'readwrite');
+        const store = transaction.objectStore(storeName);
+        const request = store.clear();
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve();
     });
 };

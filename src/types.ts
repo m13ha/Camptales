@@ -32,9 +32,16 @@ export interface GeneratedStory {
   layout: StoryLayout;
 }
 
+export interface StoryAudio {
+  voiceId: string;
+  data: Blob;
+}
+
 export interface SavedStory extends GeneratedStory {
   id: string;
   createdAt: string;
+  isFavorite?: boolean;
+  audio?: StoryAudio;
 }
 
 export interface HistoryItem extends GeneratedStory {
@@ -47,9 +54,16 @@ export interface Character {
   name: string;
   description: string;
   imageUrl?: string;
+  createdAt: string;
 }
 
 export interface AppSetting {
   id: string; // The setting key, e.g., 'app-theme'
   value: any;
+}
+
+export interface ApiUsage {
+    id: 'createStory' | 'createCharacter';
+    count: number;
+    lastReset: string; // YYYY-MM-DD
 }

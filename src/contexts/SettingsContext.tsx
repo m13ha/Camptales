@@ -7,6 +7,7 @@ import type { AppSetting } from '../types';
 type FontStyle = keyof typeof fonts;
 type FontSize = keyof typeof fontSizes;
 export type HistoryRetentionPeriod = '3d' | '7d' | '30d' | 'never';
+export type TtsEngine = 'ai' | 'browser';
 
 interface SettingsContextType {
   theme: Theme;
@@ -25,19 +26,37 @@ interface SettingsContextType {
   setSpeechVoice: (voiceName: string | null) => void;
   storyLayout: StoryLayout;
   setStoryLayout: (layout: StoryLayout) => void;
+  ttsEngine: TtsEngine;
+  setTtsEngine: (engine: TtsEngine) => void;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 const defaultSettings = {
   themeName: 'cosmicNight',
-  fontStyle: 'Sans Serif' as FontStyle,
+  fontStyle: 'Inter' as FontStyle,
   fontSize: 'Medium' as FontSize,
   historyRetention: '7d' as HistoryRetentionPeriod,
   speechRate: 1,
   speechPitch: 1,
   speechVoice: null as string | null,
   storyLayout: 'classic' as StoryLayout,
+  ttsEngine: 'browser' as TtsEngine,
+};
+
+const fontGoogleLinks: Record<string, string> = {
+    'Inter': 'https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap',
+    'Lora': 'https://fonts.googleapis.com/css2?family=Lora:wght@400;700&display=swap',
+    'Comic Neue': 'https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap',
+    'Nunito': 'https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap',
+    'Montserrat': 'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap',
+    'Poppins': 'https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap',
+    'Roboto Slab': 'https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;700&display=swap',
+    'Merriweather': 'https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&display=swap',
+    'Indie Flower': 'https://fonts.googleapis.com/css2?family=Indie+Flower&display=swap',
+    'Patrick Hand': 'https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap',
+    'Caveat': 'https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap',
+    'Quicksand': 'https://fonts.googleapis.com/css2?family=Quicksand:wght@400;700&display=swap',
 };
 
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -50,6 +69,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [speechPitch, setSpeechPitch] = useState<number>(defaultSettings.speechPitch);
   const [speechVoice, setSpeechVoice] = useState<string | null>(defaultSettings.speechVoice);
   const [storyLayout, setStoryLayout] = useState<StoryLayout>(defaultSettings.storyLayout);
+  const [ttsEngine, setTtsEngine] = useState<TtsEngine>(defaultSettings.ttsEngine);
   
   // Hook to interact with the 'settings' store in IndexedDB
   const { data: settingsFromDB, addItem: saveSettingToDB, loading: settingsLoading } = useIndexedDB<AppSetting>('settings');
@@ -66,6 +86,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           setSpeechPitch(settingsMap.get('speech-pitch') ?? defaultSettings.speechPitch);
           setSpeechVoice(settingsMap.get('speech-voice') ?? defaultSettings.speechVoice);
           setStoryLayout(settingsMap.get('story-layout') ?? defaultSettings.storyLayout);
+          setTtsEngine(settingsMap.get('tts-engine') ?? defaultSettings.ttsEngine);
       }
   }, [settingsFromDB, settingsLoading]);
 
@@ -84,15 +105,12 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     root.style.setProperty('--font-size-base', fontSizes[fontSize]);
     
     // Add Google Fonts link if not present
-    const fontId = `font-link-${fontStyle.replace(' ', '-')}`;
+    const fontId = `font-link-${fontStyle.replace(/\s+/g, '-')}`;
     if (!document.getElementById(fontId)) {
         const link = document.createElement('link');
         link.id = fontId;
         link.rel = 'stylesheet';
-        let href = '';
-        if(fontStyle === 'Serif') href = 'https://fonts.googleapis.com/css2?family=Lora:wght@400;700&display=swap';
-        if(fontStyle === 'Sans Serif') href = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap';
-        if(fontStyle === 'Playful') href = 'https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap';
+        const href = fontGoogleLinks[fontStyle];
         
         if (href) {
             link.href = href;
@@ -129,6 +147,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setSpeechVoice: createSetter(setSpeechVoice, 'speech-voice'),
     storyLayout,
     setStoryLayout: createSetter(setStoryLayout, 'story-layout'),
+    ttsEngine,
+    setTtsEngine: createSetter(setTtsEngine, 'tts-engine'),
   };
 
   return (

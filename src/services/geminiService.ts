@@ -1,14 +1,21 @@
-import { GoogleGenAI, Type } from "@google/genai";
-import type { UserPrompt, StoryApiResponse, StoryPart, AspectRatio } from '../types';
-
-if (!process.env.API_KEY) {
-    throw new Error("API_KEY environment variable not set");
-}
-
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+import { Type } from "@google/genai";
+import type { UserPrompt, StoryPart, AspectRatio } from '../types';
+import { ai, handleApiError } from './apiClient';
 
 // Helper function to add a delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Helper to parse a data: URL into its components
+const parseDataUrl = (dataUrl: string): { mimeType: string; data: string; } => {
+    const match = dataUrl.match(/^data:(.+);base64,(.+)$/);
+    if (!match) {
+        throw new Error('Invalid data URL format');
+    }
+    return {
+        mimeType: match[1],
+        data: match[2]
+    };
+};
 
 const storyPartsSchema = {
     type: Type.OBJECT,
@@ -49,11 +56,9 @@ Return only the title text, without any labels or quotes.`;
             contents: titlePrompt,
         });
 
-        // Clean up the response, removing potential quotes and leading/trailing whitespace.
         return response.text.trim().replace(/"/g, '');
     } catch (error) {
-        console.error("Error generating story title:", error);
-        throw new Error("Failed to generate a title for the story. The AI might be daydreaming. Please try again.");
+        throw handleApiError(error, "generate a title for the story");
     }
 };
 
@@ -92,9 +97,10 @@ export const generateStoryIdeas = async (category: string = 'Surprise Me!'): Pro
         const ideas: UserPrompt = JSON.parse(response.text);
         return ideas;
     } catch (error) {
-        console.error("Error generating story ideas:", error);
-        // To prevent an "uncaught exception: Object", we ensure we always throw a proper Error.
-        throw new Error("Failed to brainstorm new story ideas. The AI might be taking a nap. Please try again.");
+        if (error instanceof SyntaxError) {
+             throw new Error("The AI's response for new ideas was not in the expected format. Please try again.");
+        }
+        throw handleApiError(error, "brainstorm new story ideas");
     }
 };
 
@@ -103,10 +109,9 @@ export const generateStoryAndImages = async (
     prompt: UserPrompt,
     setLoadingMessage: (message: string) => void,
     aspectRatio: AspectRatio,
+    characterImageUrl?: string | null
 ): Promise<StoryPart[]> => {
     
-    console.log("Generating story with prompt:", prompt);
-
     const storyPrompt = `Create a short bedtime story for a child.
     - Main Character: ${prompt.character}
     - Setting: ${prompt.setting}
@@ -114,38 +119,52 @@ export const generateStoryAndImages = async (
     - Moral/Concept to convey: ${prompt.concept}
     The story should be gentle, magical, and have a happy or peaceful ending. It must subtly teach the moral or concept provided. Break it into exactly 3 paragraphs. For each paragraph, create a detailed image prompt.`;
 
+    let contents: any;
+
+    if (characterImageUrl) {
+        try {
+            setLoadingMessage('Analyzing character portrait...');
+            const { mimeType, data } = parseDataUrl(characterImageUrl);
+            const imagePart = {
+                inlineData: { mimeType, data }
+            };
+            const textPart = {
+                text: `${storyPrompt}\n\nIMPORTANT: The provided image is the main character. Ensure the generated image prompts describe a character consistent with this image.`
+            };
+            contents = { parts: [imagePart, textPart] };
+        } catch (error) {
+            console.error("Failed to process character image, falling back to text-only:", error);
+            contents = storyPrompt;
+        }
+    } else {
+        contents = storyPrompt;
+    }
+
+
     let textResponse;
     try {
+        setLoadingMessage('Crafting a wondrous tale just for you...');
         textResponse = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
-            contents: storyPrompt,
+            contents: contents,
             config: {
                 responseMimeType: 'application/json',
                 responseSchema: storyPartsSchema,
             }
         });
     } catch (error) {
-        console.error("Error generating story text:", error);
-        if (error instanceof Error && (error.message.toLowerCase().includes('quota') || error.message.toLowerCase().includes('rate limit'))) {
-            throw new Error(`The AI storyteller is resting! We've exceeded our story generation quota. Please wait a moment and try again.`);
-        }
-        throw new Error("There was a problem dreaming up the story. The AI may be busy. Please try again.");
+        throw handleApiError(error, "dream up the story text");
     }
     
-    console.log("Raw story response from AI:", textResponse.text);
-
     let storyData: { story: { paragraph: string, imagePrompt: string }[] };
     try {
-        // Sanitize the response: LLMs sometimes wrap JSON in markdown backticks.
         const sanitizedText = textResponse.text.trim().replace(/^```json\s*/, '').replace(/```$/, '');
         storyData = JSON.parse(sanitizedText);
     } catch (e) {
         console.error("Failed to parse story data from AI response. Raw text was:", textResponse.text, "Error:", e);
-        throw new Error("The AI's response was not in the expected format. Please try generating the story again.");
+        throw new Error("The AI's story response was not in the expected format. Please try generating the story again.");
     }
     
-    console.log("Successfully parsed story data:", storyData);
-
     if (!storyData.story || !Array.isArray(storyData.story) || storyData.story.length === 0) {
         console.error("Parsed story data is missing a valid 'story' array:", storyData);
         throw new Error("The AI failed to generate a valid story structure. Please try again with a different prompt.");
@@ -155,11 +174,7 @@ export const generateStoryAndImages = async (
 
     for (const [index, part] of storyData.story.entries()) {
         setLoadingMessage(`Generating illustration ${index + 1} of ${storyData.story.length}...`);
-        console.log(`Generating image for part ${index + 1} with prompt:`, part.imagePrompt);
-
-        // Add a delay before each image generation call to avoid hitting rate limits.
-        // The previous implementation skipped the delay for the first image, causing 429 errors.
-        await delay(5000); // 5-second delay
+        await delay(5000);
 
         try {
             const imageResult = await ai.models.generateImages({
@@ -173,7 +188,7 @@ export const generateStoryAndImages = async (
             });
 
             if (!imageResult.generatedImages || imageResult.generatedImages.length === 0) {
-                throw new Error(`Failed to generate image for paragraph ${index + 1}.`);
+                throw new Error(`The AI did not return an image for illustration ${index + 1}.`);
             }
             
             const base64ImageBytes = imageResult.generatedImages[0].image.imageBytes;
@@ -184,18 +199,10 @@ export const generateStoryAndImages = async (
                 imagePrompt: part.imagePrompt
             });
         } catch (error) {
-            console.error(`Error generating image for part ${index + 1}:`, error);
-            if (error instanceof Error && (error.message.toLowerCase().includes('quota') || error.message.toLowerCase().includes('rate limit'))) {
-                 throw new Error(`The story-making magic is in high demand! We couldn't create illustration ${index + 1}. Please wait a moment and try again.`);
-            }
-            if (error instanceof Error && error.message.toLowerCase().includes('safety')) {
-                throw new Error(`Illustration ${index + 1} couldn't be created due to safety filters. Please try adjusting the prompt.`);
-           }
-            throw new Error(`There was a problem creating illustration ${index + 1}. The AI may be busy. Please try again.`);
+            throw handleApiError(error, `create illustration ${index + 1}`);
         }
     }
 
-    console.log("Finished generating all story parts:", finalStoryParts);
     return finalStoryParts;
 };
 
@@ -212,20 +219,13 @@ export const generateStoryIllustration = async (prompt: string, aspectRatio: Asp
         });
 
         if (!imageResult.generatedImages || imageResult.generatedImages.length === 0) {
-            throw new Error(`Failed to generate image.`);
+            throw new Error(`The AI did not return an image.`);
         }
         
         const base64ImageBytes = imageResult.generatedImages[0].image.imageBytes;
         return `data:image/png;base64,${base64ImageBytes}`;
     } catch (error) {
-        console.error(`Error generating illustration:`, error);
-        if (error instanceof Error && (error.message.toLowerCase().includes('quota') || error.message.toLowerCase().includes('rate limit'))) {
-             throw new Error(`The story-making magic is in high demand! We couldn't create an illustration. Please wait a moment and try again.`);
-        }
-        if (error instanceof Error && error.message.toLowerCase().includes('safety')) {
-            throw new Error(`The illustration couldn't be created due to safety filters.`);
-       }
-        throw new Error(`There was a problem creating the illustration. The AI may be busy. Please try again.`);
+        throw handleApiError(error, "create the illustration");
     }
 };
 
@@ -242,23 +242,13 @@ export const generateCharacterImage = async (description: string): Promise<strin
         });
 
         if (!imageResponse.generatedImages || imageResponse.generatedImages.length === 0) {
-            throw new Error('Failed to generate character image.');
+            throw new Error('The AI did not return a character image.');
         }
 
         const base64ImageBytes = imageResponse.generatedImages[0].image.imageBytes;
         return `data:image/png;base64,${base64ImageBytes}`;
     } catch (error) {
-        console.error("Unexpected error in generateCharacterImage:", error);
-        if (error instanceof Error) {
-            if (error.message.toLowerCase().includes('quota') || error.message.toLowerCase().includes('rate limit')) {
-                throw new Error('The character portrait studio is very busy right now. Please wait a moment and try again.');
-            }
-             // Instead of re-throwing the original error, create a new one from its message.
-            // This prevents issues with complex error objects while preserving the message.
-            throw new Error(error.message);
-        }
-        // Fallback for non-Error exceptions.
-        throw new Error('An unexpected error occurred while generating the character portrait.');
+        throw handleApiError(error, "generate the character portrait");
     }
 }
 
@@ -267,8 +257,6 @@ const blobToBase64 = (blob: Blob): Promise<string> => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onloadend = () => {
-            // result is a data URL, e.g., "data:audio/webm;base64,...."
-            // we need to strip the prefix
             const base64String = (reader.result as string).split(',')[1];
             resolve(base64String);
         };
@@ -276,6 +264,59 @@ const blobToBase64 = (blob: Blob): Promise<string> => {
         reader.readAsDataURL(blob);
     });
 };
+
+const characterSchema = {
+    type: Type.OBJECT,
+    properties: {
+        name: { type: Type.STRING, description: 'A creative name for the character based on the description. e.g., "Sparklewing"' },
+        description: { type: Type.STRING, description: 'A detailed description of the character, captured from the audio. e.g., "A tiny dragon the size of a teacup with shimmering, rainbow-colored scales."' },
+    },
+    required: ["name", "description"]
+};
+
+export const transcribeAndStructureCharacterPrompt = async (audioBlob: Blob): Promise<{ name: string; description: string; }> => {
+    try {
+        const base64Audio = await blobToBase64(audioBlob);
+
+        const instructionPrompt = `
+            Transcribe the following audio, which describes a story character.
+            Based on the transcription, extract the following components:
+            1.  **Name**: The character's name. If a name isn't explicitly mentioned, invent a creative one that fits the description.
+            2.  **Description**: A detailed physical and personality description of the character.
+
+            Return the response as a single, well-formed JSON object with keys: "name" and "description".
+        `;
+
+        const audioPart = {
+            inlineData: {
+                mimeType: audioBlob.type,
+                data: base64Audio
+            }
+        };
+
+        const textPart = {
+            text: instructionPrompt
+        };
+
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: { parts: [audioPart, textPart] },
+            config: {
+                responseMimeType: 'application/json',
+                responseSchema: characterSchema,
+            }
+        });
+
+        const characterData: { name: string; description: string; } = JSON.parse(response.text);
+        return characterData;
+
+    } catch (error) {
+        if (error instanceof SyntaxError) {
+             throw new Error("The AI's response to your audio was not in the expected format. Please try speaking again.");
+        }
+        throw handleApiError(error, "understand your character idea from the audio");
+    }
+}
 
 export const transcribeAndStructureStoryPrompt = async (audioBlob: Blob): Promise<UserPrompt> => {
     try {
@@ -309,7 +350,7 @@ export const transcribeAndStructureStoryPrompt = async (audioBlob: Blob): Promis
             contents: { parts: [audioPart, textPart] },
             config: {
                 responseMimeType: 'application/json',
-                responseSchema: storyIdeasSchema, // Re-use the existing schema
+                responseSchema: storyIdeasSchema,
             }
         });
 
@@ -317,7 +358,9 @@ export const transcribeAndStructureStoryPrompt = async (audioBlob: Blob): Promis
         return structuredPrompt;
 
     } catch (error) {
-        console.error("Error transcribing and structuring audio:", error);
-        throw new Error("Failed to understand your story idea from the audio. The AI might be a bit sleepy. Please try speaking clearly or try again.");
+        if (error instanceof SyntaxError) {
+             throw new Error("The AI's response to your audio was not in the expected format. Please try speaking again.");
+        }
+        throw handleApiError(error, "understand your story idea from the audio");
     }
 }

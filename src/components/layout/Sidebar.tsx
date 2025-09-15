@@ -1,9 +1,5 @@
 import React from 'react';
-import { CreatorIcon } from '../icons/CreatorIcon';
-import { BookOpenIcon } from '../icons/BookOpenIcon';
-import { UsersIcon } from '../icons/UsersIcon';
-import { SettingsIcon } from '../icons/SettingsIcon';
-import { HistoryIcon } from '../icons/HistoryIcon';
+import { Wand2, BookOpen, Users, Settings, History } from 'lucide-react';
 import { Logo } from '../Logo';
 
 type View = 'create' | 'stories' | 'history' | 'characters' | 'settings';
@@ -14,11 +10,11 @@ interface SidebarProps {
 }
 
 const navItems: { id: View; label: string; icon: React.FC<React.SVGProps<SVGSVGElement>> }[] = [
-  { id: 'create', label: 'Create', icon: CreatorIcon },
-  { id: 'stories', label: 'Saved Stories', icon: BookOpenIcon },
-  { id: 'history', label: 'History', icon: HistoryIcon },
-  { id: 'characters', label: 'Characters', icon: UsersIcon },
-  { id: 'settings', label: 'Settings', icon: SettingsIcon },
+  { id: 'create', label: 'Create', icon: Wand2 },
+  { id: 'stories', label: 'Saved Stories', icon: BookOpen },
+  { id: 'history', label: 'History', icon: History },
+  { id: 'characters', label: 'Characters', icon: Users },
+  { id: 'settings', label: 'Settings', icon: Settings },
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {

@@ -1,12 +1,11 @@
 import React from 'react';
 
-interface CardProps {
+// FIX: Extend div HTML attributes to allow passing props like onPointerDown.
+interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
-  className?: string;
-  onClick?: () => void;
 }
 
-export const Card: React.FC<CardProps> = ({ children, className = '', onClick }) => {
+export const Card: React.FC<CardProps> = ({ children, className = '', onClick, ...props }) => {
   const isClickable = !!onClick;
   
   return (
@@ -19,6 +18,8 @@ export const Card: React.FC<CardProps> = ({ children, className = '', onClick })
         ${isClickable ? 'cursor-pointer hover:border-[--primary] hover:shadow-lg hover:shadow-[--primary]/10 hover:-translate-y-1' : ''}
         ${className}
       `}
+      // FIX: Spread remaining props to the underlying div element.
+      {...props}
     >
       {children}
     </div>

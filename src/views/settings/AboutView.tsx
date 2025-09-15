@@ -1,8 +1,7 @@
 import React from 'react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
-import { GithubIcon } from '../../components/icons/GithubIcon';
-import { TwitterIcon } from '../../components/icons/TwitterIcon';
+import { Github, Twitter, Linkedin, BookText } from 'lucide-react';
 
 export const AboutView: React.FC = () => {
   return (
@@ -18,27 +17,49 @@ export const AboutView: React.FC = () => {
 
       <Card>
         <h3 className="text-xl font-bold mb-4">Connect & Contribute</h3>
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <a 
-            href="https://github.com/google/aistudio-web-apps" 
+            href="https://github.com/m13ha/camptales" 
             target="_blank" 
             rel="noopener noreferrer"
             className="w-full"
           >
             <Button className="w-full">
-              <GithubIcon className="w-5 h-5 mr-2" />
+              <Github className="w-5 h-5 mr-2" />
               View on GitHub
             </Button>
           </a>
           <a 
-            href="https://x.com/GoogleForDevs" 
+            href="https://x.com/m13ha_" 
             target="_blank" 
             rel="noopener noreferrer"
             className="w-full"
           >
             <Button className="w-full !bg-[#1DA1F2] hover:!bg-[#0c85d0] focus:!ring-[#1DA1F2]">
-              <TwitterIcon className="w-5 h-5 mr-2" />
+              <Twitter className="w-5 h-5 mr-2" />
               Follow on X
+            </Button>
+          </a>
+           <a 
+            href="https://m13ha.hashnode.dev" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="w-full"
+          >
+            <Button className="w-full !bg-[#2962FF] hover:!bg-[#0039cb] focus:!ring-[#2962FF]">
+              <BookText className="w-5 h-5 mr-2" />
+              Read on Hashnode
+            </Button>
+          </a>
+          <a 
+            href="https://www.linkedin.com/in/m13ha" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="w-full"
+          >
+            <Button className="w-full !bg-[#0A66C2] hover:!bg-[#004182] focus:!ring-[#0A66C2]">
+              <Linkedin className="w-5 h-5 mr-2" />
+              Connect on LinkedIn
             </Button>
           </a>
         </div>

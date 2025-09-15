@@ -3,11 +3,9 @@ import type { UserPrompt, Character } from '../types';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Textarea } from './ui/Textarea';
-import { MagicWandIcon } from './icons/MagicWandIcon';
-import { RefreshCwIcon } from './icons/RefreshCwIcon';
+import { Wand2, Dice5, Mic } from 'lucide-react';
 import { Card } from './ui/Card';
 import { Select } from './ui/Select';
-import { MicrophoneIcon } from './icons/MicrophoneIcon';
 import { transcribeAndStructureStoryPrompt } from '../services/geminiService';
 import { VoiceInputModal } from './VoiceInputModal';
 
@@ -22,6 +20,10 @@ interface StoryPromptFormProps {
   category: string;
   onCategoryChange: (string) => void;
   onError: (message: string) => void;
+  onCharacterSelect: (character: Character | null) => void;
+  storiesRemaining: number;
+  storyCreationBlocked: boolean;
+  isCheckingLimits: boolean;
 }
 
 const storyCategories = [
@@ -47,7 +49,11 @@ export const StoryPromptForm: React.FC<StoryPromptFormProps> = ({
     isGeneratingIdeas,
     category,
     onCategoryChange,
-    onError
+    onError,
+    onCharacterSelect,
+    storiesRemaining,
+    storyCreationBlocked,
+    isCheckingLimits,
  }) => {
   const [selectedCharId, setSelectedCharId] = useState<string>('');
   const [isRecording, setIsRecording] = useState(false);
@@ -90,6 +96,8 @@ export const StoryPromptForm: React.FC<StoryPromptFormProps> = ({
               try {
                   const structuredPrompt = await transcribeAndStructureStoryPrompt(audioBlob);
                   onPromptChange(structuredPrompt);
+                  onCharacterSelect(null); // Clear character selection after voice input
+                  setSelectedCharId('');
               } catch (error) {
                   onError(error instanceof Error ? error.message : 'Failed to process your voice input. Please try again.');
               } finally {
@@ -104,7 +112,8 @@ export const StoryPromptForm: React.FC<StoryPromptFormProps> = ({
       }
   };
 
-  const isBusy = isLoading || isGeneratingIdeas || isRecording || isProcessingAudio;
+  const isBusy = isLoading || isGeneratingIdeas || isRecording || isProcessingAudio || isCheckingLimits;
+  const isFormDisabled = isBusy || storyCreationBlocked;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -138,14 +147,15 @@ export const StoryPromptForm: React.FC<StoryPromptFormProps> = ({
                               label="Use a Saved Character"
                               value={selectedCharId}
                               onChange={(e) => {
-                              const charId = e.target.value;
-                              setSelectedCharId(charId);
-                              const selected = characters.find(c => c.id === charId);
-                              if (selected) {
-                                  onPromptChange({ ...prompt, character: selected.description });
-                              }
+                                const charId = e.target.value;
+                                setSelectedCharId(charId);
+                                const selected = characters.find(c => c.id === charId);
+                                onCharacterSelect(selected || null);
+                                if (selected) {
+                                    onPromptChange({ ...prompt, character: selected.description });
+                                }
                               }}
-                              disabled={isBusy}
+                              disabled={isFormDisabled}
                           >
                               <option value="">-- Write a new character --</option>
                               {characters.map(char => (
@@ -159,7 +169,7 @@ export const StoryPromptForm: React.FC<StoryPromptFormProps> = ({
                               onChange={(e) => onPromptChange({ ...prompt, setting: e.target.value })}
                               placeholder="e.g., A sparkling crystal cave"
                               required
-                              disabled={isBusy}
+                              disabled={isFormDisabled}
                           />
                       </div>
                       <Textarea
@@ -168,11 +178,12 @@ export const StoryPromptForm: React.FC<StoryPromptFormProps> = ({
                           value={prompt.character}
                           onChange={(e) => {
                               onPromptChange({ ...prompt, character: e.target.value });
+                              onCharacterSelect(null);
                               setSelectedCharId(''); // Deselect if user types manually
                           }}
                           placeholder="e.g., A curious rabbit with a tiny backpack"
                           required
-                          disabled={isBusy}
+                          disabled={isFormDisabled}
                           rows={3}
                       />
                       <Textarea
@@ -182,7 +193,7 @@ export const StoryPromptForm: React.FC<StoryPromptFormProps> = ({
                           onChange={(e) => onPromptChange({ ...prompt, plot: e.target.value })}
                           placeholder="e.g., Looking for the legendary Whispering Flower"
                           required
-                          disabled={isBusy}
+                          disabled={isFormDisabled}
                           rows={3}
                       />
                       <Textarea
@@ -192,7 +203,7 @@ export const StoryPromptForm: React.FC<StoryPromptFormProps> = ({
                           onChange={(e) => onPromptChange({ ...prompt, concept: e.target.value })}
                           placeholder="e.g., The importance of sharing"
                           required
-                          disabled={isBusy}
+                          disabled={isFormDisabled}
                           rows={2}
                       />
                       <Select
@@ -200,7 +211,7 @@ export const StoryPromptForm: React.FC<StoryPromptFormProps> = ({
                           label="Inspiration Theme"
                           value={category}
                           onChange={(e) => onCategoryChange(e.target.value)}
-                          disabled={isBusy}
+                          disabled={isFormDisabled}
                           className="w-full"
                       >
                           {storyCategories.map(cat => (
@@ -212,46 +223,52 @@ export const StoryPromptForm: React.FC<StoryPromptFormProps> = ({
 
               {/* Action Bar */}
               <div className="pt-6 mt-8 border-t border-[--border]">
-                  <div className="flex justify-center items-center gap-4">
-                      <Button
-                          type="button"
-                          onClick={onGenerateIdeas}
-                          disabled={isBusy}
-                          className="flex-shrink-0 !p-3"
-                          aria-label="Generate new story idea"
-                          title="Generate new story idea"
-                      >
-                          {isGeneratingIdeas ? (
-                              <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                              </svg>
-                          ) : (
-                              <RefreshCwIcon className="w-5 h-5" />
-                          )}
-                      </Button>
-                      <Button type="submit" disabled={isBusy} size="lg">
-                          <MagicWandIcon className="w-5 h-5 mr-2" />
-                          {isLoading ? 'Creating...' : 'Create'}
-                      </Button>
-                      <Button
-                          type="button"
-                          onClick={startRecording}
-                          disabled={isBusy}
-                          className={`flex-shrink-0 !p-3`}
-                          aria-label={'Start recording story idea'}
-                          title={'Start recording story idea'}
-                      >
-                          {isProcessingAudio ? (
-                              <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                              </svg>
-                          ) : (
-                              <MicrophoneIcon className="w-5 h-5" />
-                          )}
-                      </Button>
-
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="flex justify-center items-center gap-4">
+                        <Button
+                            type="button"
+                            onClick={onGenerateIdeas}
+                            disabled={isFormDisabled}
+                            className="flex-shrink-0 !p-3"
+                            aria-label="Generate new story idea"
+                            title="Generate new story idea"
+                        >
+                            {isGeneratingIdeas ? (
+                                <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            ) : (
+                                <Dice5 className="w-5 h-5" />
+                            )}
+                        </Button>
+                        <Button type="submit" disabled={isFormDisabled} size="lg">
+                            <Wand2 className="w-5 h-5 mr-2" />
+                            {isLoading ? 'Creating...' : (isCheckingLimits ? 'Checking limits...' : (storyCreationBlocked ? 'Daily Limit Reached' : 'Create'))}
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={startRecording}
+                            disabled={isFormDisabled}
+                            className={`flex-shrink-0 !p-3`}
+                            aria-label={'Start recording story idea'}
+                            title={'Start recording story idea'}
+                        >
+                            {isProcessingAudio ? (
+                                <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            ) : (
+                                <Mic className="w-5 h-5" />
+                            )}
+                        </Button>
+                    </div>
+                     {!isLoading && !isCheckingLimits && (
+                         <p className="text-sm text-[--text-secondary] mt-2">
+                            You have {storiesRemaining} story {storiesRemaining === 1 ? 'creation' : 'creations'} left today.
+                         </p>
+                      )}
                   </div>
               </div>
           </div>

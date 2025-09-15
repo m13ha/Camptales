@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Button } from './ui/Button';
-import { StopCircleIcon } from './icons/StopCircleIcon';
-import { MicrophoneIcon } from './icons/MicrophoneIcon';
+import { StopCircle, Mic } from 'lucide-react';
 
 interface VoiceInputModalProps {
   isOpen: boolean;
@@ -22,7 +21,7 @@ export const VoiceInputModal: React.FC<VoiceInputModalProps> = ({ isOpen, onStop
     const source = audioContext.createMediaStreamSource(stream);
     const analyser = audioContext.createAnalyser();
 
-    analyser.fftSize = 256;
+    analyser.fftSize = 512;
     analyser.smoothingTimeConstant = 0.5;
     source.connect(analyser);
 
@@ -73,18 +72,18 @@ export const VoiceInputModal: React.FC<VoiceInputModalProps> = ({ isOpen, onStop
       <div className="text-center">
         <div 
             ref={visualizerRef}
-            className="w-48 h-48 rounded-full bg-[--primary]/30 border-4 border-[--primary] flex items-center justify-center transition-transform duration-100 ease-linear"
+            className="w-32 h-32 mx-auto rounded-full bg-[--primary]/30 border-4 border-[--primary] flex items-center justify-center transition-transform duration-100 ease-linear"
             style={{ transform: 'scale(1)' }}
         >
-             <MicrophoneIcon className="w-16 h-16 text-white" />
+             <Mic className="w-12 h-12 text-white" />
         </div>
         <h2 className="text-3xl font-bold text-white mt-8">Listening...</h2>
         <p className="text-lg text-slate-300 mt-2">Speak your story idea now</p>
       </div>
 
-      <div className="absolute bottom-10">
+      <div className="mt-12">
         <Button onClick={onStop} size="lg" variant="danger">
-          <StopCircleIcon className="w-6 h-6 mr-2" />
+          <StopCircle className="w-6 h-6 mr-2" />
           Stop Recording
         </Button>
       </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronDownIcon } from '../icons/ChevronDownIcon';
+import { ChevronDown } from 'lucide-react';
 
 interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   label?: string;
@@ -32,7 +32,7 @@ export const Select: React.FC<SelectProps> = ({ label, id, className = '', conta
           {children}
         </select>
         <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-[--text-secondary]">
-          <ChevronDownIcon className="w-5 h-5" />
+          <ChevronDown className="w-5 h-5" />
         </div>
       </div>
     </div>

@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
 import { Button } from './Button';
-import { MagicWandIcon } from '../icons/MagicWandIcon';
+import { Wand2 } from 'lucide-react';
 
 const meta: Meta<typeof Button> = {
   title: 'UI/Button',
@@ -53,7 +53,7 @@ export const WithIcon: Story = {
     size: 'lg',
     children: (
       <>
-        <MagicWandIcon className="w-5 h-5 mr-2" />
+        <Wand2 className="w-5 h-5 mr-2" />
         Create Story
       </>
     ),

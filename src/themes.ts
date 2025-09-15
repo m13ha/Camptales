@@ -98,9 +98,18 @@ export const themes: Record<string, Theme> = {
 };
 
 export const fonts: Record<string, string> = {
-  'Sans Serif': '"Inter", sans-serif',
-  'Serif': '"Lora", serif',
-  'Playful': '"Comic Neue", cursive',
+  'Inter': '"Inter", sans-serif',
+  'Lora': '"Lora", serif',
+  'Comic Neue': '"Comic Neue", cursive',
+  'Nunito': '"Nunito", sans-serif',
+  'Montserrat': '"Montserrat", sans-serif',
+  'Poppins': '"Poppins", sans-serif',
+  'Roboto Slab': '"Roboto Slab", serif',
+  'Merriweather': '"Merriweather", serif',
+  'Indie Flower': '"Indie Flower", cursive',
+  'Patrick Hand': '"Patrick Hand", cursive',
+  'Caveat': '"Caveat", cursive',
+  'Quicksand': '"Quicksand", sans-serif',
 };
 
 export const fontSizes: Record<string, string> = {

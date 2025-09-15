@@ -1,7 +1,5 @@
 import React from 'react';
-import { CreatorIcon } from './icons/CreatorIcon';
-import { BookOpenIcon } from './icons/BookOpenIcon';
-import { UsersIcon } from './icons/UsersIcon';
+import { Wand2, BookOpen, Users } from 'lucide-react';
 
 type View = 'create' | 'stories' | 'characters';
 
@@ -11,9 +9,9 @@ interface NavbarProps {
 }
 
 const navItems: { id: View; label: string; icon: React.FC<React.SVGProps<SVGSVGElement>> }[] = [
-  { id: 'create', label: 'Create', icon: CreatorIcon },
-  { id: 'stories', label: 'Saved Stories', icon: BookOpenIcon },
-  { id: 'characters', label: 'My Characters', icon: UsersIcon },
+  { id: 'create', label: 'Create', icon: Wand2 },
+  { id: 'stories', label: 'Saved Stories', icon: BookOpen },
+  { id: 'characters', label: 'My Characters', icon: Users },
 ];
 
 export const Navbar: React.FC<NavbarProps> = ({ currentView, setCurrentView }) => {

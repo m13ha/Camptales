@@ -5,10 +5,12 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  size?: 'md' | 'xl';
 }
 
-export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
+export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 'md' }) => {
   const modalRef = useRef<HTMLDivElement>(null);
+  const sizeClass = size === 'md' ? 'max-w-lg' : 'max-w-3xl';
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -18,11 +20,13 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
     };
 
     if (isOpen) {
+      document.body.style.overflow = 'hidden'; // Prevent background scrolling
       document.addEventListener('keydown', handleKeyDown);
       modalRef.current?.focus();
     }
 
     return () => {
+      document.body.style.overflow = ''; // Restore background scrolling
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen, onClose]);
@@ -41,11 +45,12 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
     >
       <div
         ref={modalRef}
-        className="bg-[--card-background] border border-[--border] rounded-xl shadow-2xl w-full max-w-lg p-6 modal-fade-in"
+        className={`bg-[--card-background] border border-[--border] rounded-xl shadow-2xl w-full ${sizeClass} modal-fade-in flex flex-col max-h-[90vh]`}
         onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside modal
         tabIndex={-1}
       >
-        <div className="flex items-start justify-between mb-4">
+        {/* Header */}
+        <div className="flex-shrink-0 flex items-start justify-between p-6 pb-4">
           <h2 id="modal-title" className="text-2xl font-bold text-[--text-primary]">
             {title}
           </h2>
@@ -59,7 +64,8 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
             </svg>
           </button>
         </div>
-        <div>{children}</div>
+        {/* Scrollable Content */}
+        <div className="flex-grow overflow-y-auto px-6 pb-6">{children}</div>
       </div>
     </div>
   );
