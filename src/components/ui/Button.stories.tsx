@@ -1,83 +1,58 @@
-import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
 import { Button } from './Button';
-import { Wand2 } from 'lucide-react';
 
 const meta: Meta<typeof Button> = {
-  title: 'UI/Button',
+  title: 'Components/Button',
   component: Button,
-  parameters: {
-    layout: 'centered',
-  },
   tags: ['autodocs'],
   argTypes: {
+    variant: {
+      control: { type: 'select' },
+      options: ['primary', 'secondary', 'outline', 'ghost', 'link'],
+    },
     size: {
-      control: 'select',
+      control: { type: 'select' },
       options: ['sm', 'md', 'lg'],
     },
-    variant: {
-      control: 'select',
-      options: ['primary', 'danger'],
-    },
-    children: {
-      control: 'text',
-    },
-    disabled: {
-      control: 'boolean',
-    },
+    onClick: { action: 'clicked' },
   },
 };
 
 export default meta;
-type Story = StoryObj<typeof meta>;
+
+type Story = StoryObj<typeof Button>;
 
 export const Primary: Story = {
   args: {
     variant: 'primary',
-    size: 'md',
-    children: 'Primary Button',
+    children: 'Button',
   },
 };
 
-export const Danger: Story = {
+export const Secondary: Story = {
   args: {
-    variant: 'danger',
-    size: 'md',
-    children: 'Danger Button',
+    variant: 'secondary',
+    children: 'Button',
   },
 };
 
-export const WithIcon: Story = {
+export const Outline: Story = {
   args: {
-    variant: 'primary',
-    size: 'lg',
-    children: (
-      <>
-        <Wand2 className="w-5 h-5 mr-2" />
-        Create Story
-      </>
-    ),
-  },
-};
-
-export const Small: Story = {
-  args: {
-    size: 'sm',
-    children: 'Small Button',
+    variant: 'outline',
+    children: 'Button',
   },
 };
 
 export const Large: Story = {
   args: {
     size: 'lg',
-    children: 'Large Button',
+    children: 'Button',
   },
 };
 
-export const Disabled: Story = {
+export const Small: Story = {
   args: {
-    size: 'md',
-    children: 'Disabled',
-    disabled: true,
+    size: 'sm',
+    children: 'Button',
   },
 };
